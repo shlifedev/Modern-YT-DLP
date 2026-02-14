@@ -164,7 +164,7 @@
   })
 
   function handleDebugKey(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "D") {
+    if (e.key === "F10") {
       e.preventDefault()
       showDebug = !showDebug
     }
