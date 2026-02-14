@@ -191,7 +191,6 @@ jobs:
             | Linux (rpm) | `.rpm` |
           files: |
             artifacts/**/*.exe
-            artifacts/**/*portable*.exe
             artifacts/**/*.msi
             artifacts/**/*.dmg
             artifacts/**/*.app.tar.gz
