@@ -151,16 +151,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         }
     };
 
-    let app_data_dir = match app.path().app_data_dir() {
-        Ok(d) => d,
-        Err(_) => {
-            manager.release();
-            process_next_pending(app);
-            return;
-        }
-    };
-
-    let ytdlp_path = match binary::resolve_ytdlp_path(&app_data_dir).await {
+    let ytdlp_path = match binary::resolve_ytdlp_path().await {
         Ok(p) => p,
         Err(_) => {
             let _ = db_state.update_download_status(
@@ -186,7 +177,6 @@ async fn execute_download(app: AppHandle, task_id: u64) {
             return;
         }
     };
-    let ffmpeg_path = binary::get_ffmpeg_path(&app_data_dir);
 
     let settings = match settings::get_settings(&app) {
         Ok(s) => s,
@@ -220,11 +210,6 @@ async fn execute_download(app: AppHandle, task_id: u64) {
 
     cmd.arg("--format").arg(&task.format_id);
     cmd.arg("--output").arg(&task.output_path);
-
-    // Get ffmpeg directory (parent of ffmpeg binary)
-    if let Some(ffmpeg_dir) = ffmpeg_path.parent() {
-        cmd.arg("--ffmpeg-location").arg(ffmpeg_dir);
-    }
 
     cmd.arg("--progress-template")
         .arg(progress::progress_template());
