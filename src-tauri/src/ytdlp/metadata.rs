@@ -22,8 +22,8 @@ static PLAYLIST_PATTERN: Lazy<Regex> = Lazy::new(|| {
 static CHANNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         Regex::new(r"^https?://(?:www\.)?youtube\.com/channel/([a-zA-Z0-9_-]+)").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/@([a-zA-Z0-9_-]+)").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/c/([a-zA-Z0-9_-]+)").unwrap(),
+        Regex::new(r"^https?://(?:www\.)?youtube\.com/@([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)").unwrap(),
+        Regex::new(r"^https?://(?:www\.)?youtube\.com/c/([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)").unwrap(),
     ]
 });
 
@@ -243,6 +243,13 @@ pub async fn fetch_playlist_info(
     // Run yt-dlp with --flat-playlist --dump-json
     let mut cmd = tokio::process::Command::new(&ytdlp_path);
     cmd.arg("--flat-playlist").arg("--dump-json");
+    // Server-side pagination: yt-dlp -I START:END (1-indexed)
+    // page_size >= 99999 means "Download All", so skip -I
+    if page_size < 99999 {
+        let start = page * page_size + 1; // 1-indexed
+        let end = start + page_size - 1; // inclusive
+        cmd.arg("-I").arg(format!("{}:{}", start, end));
+    }
     if let Some(browser) = &settings.cookie_browser {
         cmd.arg("--cookies-from-browser").arg(browser);
     }
@@ -311,9 +318,20 @@ pub async fn fetch_playlist_info(
     }
 
     if all_entries.is_empty() {
-        return Err(AppError::MetadataError(
-            "No entries found in playlist".to_string(),
-        ));
+        if page == 0 {
+            return Err(AppError::MetadataError(
+                "No entries found in playlist".to_string(),
+            ));
+        }
+        // page > 0 with empty results = end of playlist
+        return Ok(PlaylistResult {
+            playlist_id: String::new(),
+            title: String::new(),
+            url: url.clone(),
+            video_count: None,
+            channel_name: None,
+            entries: vec![],
+        });
     }
 
     // Extract playlist-level metadata from the first entry or any entry with playlist info
@@ -344,7 +362,12 @@ pub async fn fetch_playlist_info(
         .or_else(|| first_entry["uploader"].as_str())
         .map(|s| s.to_string());
 
-    let video_count = all_entries.len() as u64;
+    // Try to extract total count from yt-dlp's playlist_count field
+    let video_count: Option<u64> = first_entry["playlist_count"].as_u64().or(if page_size >= 99999 {
+        Some(all_entries.len() as u64) // Full fetch: len() is accurate
+    } else {
+        None // Paginated: total count unknown
+    });
 
     // Map entries to PlaylistEntry structs
     let mut playlist_entries: Vec<PlaylistEntry> = Vec::new();
@@ -390,20 +413,13 @@ pub async fn fetch_playlist_info(
         });
     }
 
-    // Apply pagination
-    let start_index = (page * page_size) as usize;
-    let paginated_entries: Vec<PlaylistEntry> = playlist_entries
-        .into_iter()
-        .skip(start_index)
-        .take(page_size as usize)
-        .collect();
-
+    // -I flag handles server-side pagination, no skip/take needed
     Ok(PlaylistResult {
         playlist_id,
         title,
         url: url.clone(),
-        video_count: Some(video_count),
+        video_count,
         channel_name,
-        entries: paginated_entries,
+        entries: playlist_entries,
     })
 }

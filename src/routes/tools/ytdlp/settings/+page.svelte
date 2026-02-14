@@ -60,7 +60,7 @@
 
 <div class="flex-1 flex flex-col h-full overflow-y-auto hide-scrollbar">
   <header class="px-6 py-4 shrink-0">
-    <h2 class="text-xl font-display font-bold text-gray-900">Settings</h2>
+    <h2 class="text-xl font-display font-bold text-gray-100">Settings</h2>
     <p class="text-gray-400 mt-1">Configure your download preferences</p>
   </header>
 
@@ -71,51 +71,51 @@
   {:else}
     <div class="px-6 pb-6 space-y-4 max-w-2xl">
       <!-- Download Path -->
-      <div class="bg-yt-highlight rounded-xl p-4 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl p-4 border border-white/[0.06]">
         <div class="flex items-center gap-3 mb-3">
           <div class="p-2 bg-blue-500/10 rounded-lg text-blue-600">
             <span class="material-symbols-outlined text-[20px]">folder</span>
           </div>
-          <h3 class="font-display font-semibold text-base text-gray-900">Download Path</h3>
+          <h3 class="font-display font-semibold text-base text-gray-100">Download Path</h3>
         </div>
         <div class="flex gap-2">
           <input
             type="text"
-            class="flex-1 h-11 bg-yt-surface text-gray-900 rounded-xl px-4 border border-gray-200 focus:ring-2 focus:ring-yt-primary focus:outline-none text-sm font-mono"
+            class="flex-1 h-11 bg-yt-surface text-gray-100 rounded-xl px-4 border border-white/[0.06] focus:ring-2 focus:ring-yt-primary focus:outline-none text-sm font-mono"
             bind:value={settings.downloadPath}
             readonly
           />
-          <button class="h-11 px-5 rounded-xl bg-yt-surface hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors border border-gray-200" onclick={handleSelectDir}>
+          <button class="h-11 px-5 rounded-xl bg-yt-surface hover:bg-white/[0.06] text-gray-400 text-sm font-medium transition-colors border border-white/[0.06]" onclick={handleSelectDir}>
             Browse
           </button>
         </div>
       </div>
 
       <!-- Concurrent Downloads -->
-      <div class="bg-yt-highlight rounded-xl p-4 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl p-4 border border-white/[0.06]">
         <div class="flex items-center gap-3 mb-3">
           <div class="p-2 bg-amber-500/10 rounded-lg text-amber-600">
             <span class="material-symbols-outlined text-[20px]">speed</span>
           </div>
-          <h3 class="font-display font-semibold text-base text-gray-900">Concurrent Downloads</h3>
+          <h3 class="font-display font-semibold text-base text-gray-100">Concurrent Downloads</h3>
         </div>
         <div class="flex items-center gap-4">
           <input type="range" class="flex-1 accent-yt-primary" min="1" max="10" bind:value={settings.maxConcurrent} />
-          <span class="text-lg font-bold font-mono w-8 text-center text-gray-900">{settings.maxConcurrent}</span>
+          <span class="text-lg font-bold font-mono w-8 text-center text-gray-100">{settings.maxConcurrent}</span>
         </div>
       </div>
 
       <!-- Cookie Browser -->
-      <div class="bg-yt-highlight rounded-xl p-4 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl p-4 border border-white/[0.06]">
         <div class="flex items-center gap-3 mb-3">
           <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-600">
             <span class="material-symbols-outlined text-[20px]">cookie</span>
           </div>
-          <h3 class="font-display font-semibold text-base text-gray-900">Cookie Browser</h3>
+          <h3 class="font-display font-semibold text-base text-gray-100">Cookie Browser</h3>
         </div>
         <div class="relative">
           <select
-            class="w-full bg-yt-surface text-gray-900 border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-yt-primary focus:outline-none appearance-none cursor-pointer"
+            class="w-full bg-yt-surface text-gray-100 border border-white/[0.06] rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-yt-primary focus:outline-none appearance-none cursor-pointer"
             bind:value={settings.cookieBrowser}
           >
             <option value={null}>None</option>
@@ -131,31 +131,31 @@
       </div>
 
       <!-- Auto Update -->
-      <div class="bg-yt-highlight rounded-xl p-4 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl p-4 border border-white/[0.06]">
         <div class="flex items-center gap-3 mb-3">
           <div class="p-2 bg-cyan-500/10 rounded-lg text-cyan-600">
             <span class="material-symbols-outlined text-[20px]">update</span>
           </div>
-          <h3 class="font-display font-semibold text-base text-gray-900">Auto Update</h3>
+          <h3 class="font-display font-semibold text-base text-gray-100">Auto Update</h3>
         </div>
-        <div class="flex items-center justify-between bg-yt-surface p-2.5 rounded-xl px-4 border border-gray-200">
-          <span class="text-sm text-gray-600">Auto-update yt-dlp on launch</span>
+        <div class="flex items-center justify-between bg-yt-surface p-2.5 rounded-xl px-4 border border-white/[0.06]">
+          <span class="text-sm text-gray-400">Auto-update yt-dlp on launch</span>
           <label class="relative inline-flex items-center cursor-pointer">
             <input type="checkbox" bind:checked={settings.autoUpdateYtdlp} class="sr-only peer" />
-            <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yt-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yt-primary"></div>
+            <div class="w-9 h-5 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yt-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-white/10 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yt-primary"></div>
           </label>
         </div>
 
         <div class="flex items-center gap-3 mt-4">
           <button
-            class="px-5 py-2 rounded-xl bg-yt-surface hover:bg-gray-100 text-gray-600 text-sm font-medium transition-colors border border-gray-200"
+            class="px-5 py-2 rounded-xl bg-yt-surface hover:bg-white/[0.06] text-gray-400 text-sm font-medium transition-colors border border-white/[0.06]"
             onclick={handleUpdateYtdlp}
           >
             <span class="material-symbols-outlined text-[18px] align-middle mr-1">refresh</span>
             Update Now
           </button>
           {#if updateStatus}
-            <span class="text-sm text-gray-500">{updateStatus}</span>
+            <span class="text-sm text-gray-400">{updateStatus}</span>
           {/if}
         </div>
       </div>

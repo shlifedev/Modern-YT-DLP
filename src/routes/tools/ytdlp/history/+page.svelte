@@ -65,7 +65,7 @@
 
 <div class="flex-1 flex flex-col h-full overflow-y-auto hide-scrollbar">
   <header class="px-6 py-4 shrink-0">
-    <h2 class="text-xl font-display font-bold text-gray-900">Library</h2>
+    <h2 class="text-xl font-display font-bold text-gray-100">Library</h2>
     <p class="text-gray-400 mt-1">Your download history</p>
   </header>
 
@@ -77,7 +77,7 @@
       </div>
       <input
         type="text"
-        class="w-full h-10 bg-yt-highlight text-gray-900 rounded-xl pl-12 pr-4 border border-gray-200 focus:ring-2 focus:ring-yt-primary focus:outline-none placeholder-gray-400 text-sm"
+        class="w-full h-10 bg-yt-highlight text-gray-100 rounded-xl pl-12 pr-4 border border-white/[0.06] focus:ring-2 focus:ring-yt-primary focus:outline-none placeholder-gray-600 text-sm"
         placeholder="제목으로 검색..."
         value={search}
         oninput={(e) => handleSearch((e.target as HTMLInputElement).value)}
@@ -92,30 +92,30 @@
       </div>
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center py-20">
-        <span class="material-symbols-outlined text-gray-300 text-6xl">library_books</span>
-        <p class="text-gray-500 mt-4 text-lg">다운로드 이력이 없습니다</p>
+        <span class="material-symbols-outlined text-gray-600 text-6xl">library_books</span>
+        <p class="text-gray-400 mt-4 text-lg">다운로드 이력이 없습니다</p>
       </div>
     {:else}
       {#each items as item}
-        <div class="bg-yt-highlight rounded-xl p-4 flex gap-4 items-center group hover:bg-gray-100 transition-colors border border-gray-200">
-          <div class="w-20 h-14 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
-            <div class="w-full h-full bg-gradient-to-br from-gray-50 to-gray-200 flex items-center justify-center">
+        <div class="bg-yt-highlight rounded-xl p-4 flex gap-4 items-center group hover:bg-white/[0.06] transition-colors border border-white/[0.06]">
+          <div class="w-20 h-14 bg-white/[0.04] rounded-lg overflow-hidden shrink-0 relative">
+            <div class="w-full h-full bg-gradient-to-br from-white/[0.03] to-white/[0.08] flex items-center justify-center">
               <span class="material-symbols-outlined text-green-600/60">check_circle</span>
             </div>
           </div>
 
           <div class="flex-1 min-w-0">
-            <h4 class="font-medium text-gray-900 text-sm truncate mb-1">{item.title}</h4>
+            <h4 class="font-medium text-gray-100 text-sm truncate mb-1">{item.title}</h4>
             <div class="flex items-center gap-3 text-xs text-gray-400">
-              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-600">{item.qualityLabel || "N/A"}</span>
-              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-600">{item.format}</span>
+              <span class="px-2 py-0.5 rounded bg-white/[0.06] text-gray-400">{item.qualityLabel || "N/A"}</span>
+              <span class="px-2 py-0.5 rounded bg-white/[0.06] text-gray-400">{item.format}</span>
               <span>{formatSize(item.fileSize)}</span>
               <span class="text-gray-400">{formatDate(item.downloadedAt)}</span>
             </div>
           </div>
 
           <button
-            class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 transition-all p-2 rounded-lg hover:bg-red-500/10"
+            class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all p-2 rounded-lg hover:bg-red-500/10"
             onclick={() => handleDelete(item.id)}
           >
             <span class="material-symbols-outlined text-[20px]">delete</span>
@@ -127,17 +127,17 @@
       {#if totalPages > 1}
         <div class="flex justify-center items-center gap-4 pt-4">
           <button
-            class="px-4 py-2 rounded-xl bg-yt-highlight text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 border border-gray-200"
+            class="px-4 py-2 rounded-xl bg-yt-highlight text-gray-400 hover:bg-white/[0.06] transition-colors disabled:opacity-50 border border-white/[0.06]"
             onclick={prevPage}
             disabled={currentPage === 0}
           >
             <span class="material-symbols-outlined text-[18px]">chevron_left</span>
           </button>
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-gray-400">
             {currentPage + 1} / {totalPages}
           </span>
           <button
-            class="px-4 py-2 rounded-xl bg-yt-highlight text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 border border-gray-200"
+            class="px-4 py-2 rounded-xl bg-yt-highlight text-gray-400 hover:bg-white/[0.06] transition-colors disabled:opacity-50 border border-white/[0.06]"
             onclick={nextPage}
             disabled={currentPage >= totalPages - 1}
           >

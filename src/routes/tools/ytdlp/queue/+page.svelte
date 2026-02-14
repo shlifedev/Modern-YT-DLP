@@ -72,7 +72,7 @@
   <header class="px-6 py-4 shrink-0">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-xl font-display font-bold text-gray-900">Downloads</h2>
+        <h2 class="text-xl font-display font-bold text-gray-100">Downloads</h2>
         <p class="text-gray-400 mt-1">Manage your download queue</p>
       </div>
       <div class="flex gap-2">
@@ -97,17 +97,17 @@
 
     <!-- Stats -->
     <div class="flex gap-4 mt-4">
-      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
         <span class="material-symbols-outlined text-yt-primary text-[18px]">downloading</span>
-        <span class="text-sm"><span class="font-bold text-gray-900">{activeCount}</span> <span class="text-gray-400">Active</span></span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{activeCount}</span> <span class="text-gray-400">Active</span></span>
       </div>
-      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-gray-200">
+      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
         <span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span>
-        <span class="text-sm"><span class="font-bold text-gray-900">{completedCount}</span> <span class="text-gray-400">Completed</span></span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{completedCount}</span> <span class="text-gray-400">Completed</span></span>
       </div>
-      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-gray-200">
-        <span class="material-symbols-outlined text-gray-400 text-[18px]">list</span>
-        <span class="text-sm"><span class="font-bold text-gray-900">{queue.length}</span> <span class="text-gray-400">Total</span></span>
+      <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
+        <span class="material-symbols-outlined text-gray-500 text-[18px]">list</span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{queue.length}</span> <span class="text-gray-400">Total</span></span>
       </div>
     </div>
   </header>
@@ -119,20 +119,20 @@
       </div>
     {:else if queue.length === 0}
       <div class="flex flex-col items-center justify-center py-20 text-center">
-        <span class="material-symbols-outlined text-gray-300 text-6xl">inbox</span>
-        <p class="text-gray-500 mt-4 text-lg">대기열이 비어 있습니다</p>
+        <span class="material-symbols-outlined text-gray-600 text-6xl">inbox</span>
+        <p class="text-gray-400 mt-4 text-lg">대기열이 비어 있습니다</p>
         <p class="text-gray-400 text-sm mt-1">홈에서 다운로드를 시작하세요</p>
       </div>
     {:else}
       {#each queue as item (item.id)}
-        <div class="bg-yt-highlight rounded-xl p-4 flex gap-4 items-center hover:bg-gray-100 transition-colors border border-gray-200
+        <div class="bg-yt-highlight rounded-xl p-4 flex gap-4 items-center hover:bg-white/[0.06] transition-colors border border-white/[0.06]
           {item.status === 'downloading' ? '!border-yt-primary/30 relative overflow-hidden' : ''}">
           {#if item.status === "downloading"}
             <div class="absolute bottom-0 left-0 h-1 bg-yt-primary" style="width: {item.progress || 0}%"></div>
           {/if}
 
-          <div class="w-20 h-14 bg-gray-100 rounded-lg overflow-hidden shrink-0 relative">
-            <div class="w-full h-full bg-gradient-to-br from-gray-50 to-gray-200 flex items-center justify-center">
+          <div class="w-20 h-14 bg-white/[0.04] rounded-lg overflow-hidden shrink-0 relative">
+            <div class="w-full h-full bg-gradient-to-br from-white/[0.03] to-white/[0.08] flex items-center justify-center">
               {#if item.status === "downloading"}
                 <span class="material-symbols-outlined text-yt-primary animate-spin">progress_activity</span>
               {:else if item.status === "completed"}
@@ -140,22 +140,22 @@
               {:else if item.status === "failed"}
                 <span class="material-symbols-outlined text-red-600">error</span>
               {:else}
-                <span class="material-symbols-outlined text-gray-400">download</span>
+                <span class="material-symbols-outlined text-gray-500">download</span>
               {/if}
             </div>
           </div>
 
           <div class="flex-1 min-w-0">
-            <h4 class="font-medium text-gray-900 text-sm truncate mb-1">{item.title}</h4>
+            <h4 class="font-medium text-gray-100 text-sm truncate mb-1">{item.title}</h4>
             <div class="flex items-center gap-3 text-xs text-gray-400">
-              <span class="px-2 py-0.5 rounded bg-gray-200 text-gray-600">{item.qualityLabel || "N/A"}</span>
+              <span class="px-2 py-0.5 rounded bg-white/[0.06] text-gray-400">{item.qualityLabel || "N/A"}</span>
               {#if item.status === "downloading" && item.speed}
                 <span class="text-yt-primary font-mono">{item.speed}</span>
                 <span>ETA: {item.eta || "..."}</span>
               {/if}
             </div>
             {#if item.status === "downloading"}
-              <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+              <div class="w-full bg-white/[0.06] rounded-full h-1.5 mt-2">
                 <div class="bg-yt-primary h-1.5 rounded-full transition-all" style="width: {item.progress || 0}%"></div>
               </div>
             {/if}
@@ -168,8 +168,8 @@
                 Completed
               </span>
             {:else if item.status === "downloading"}
-              <span class="text-gray-900 text-sm font-bold font-mono">{(item.progress || 0).toFixed(0)}%</span>
-              <button class="text-gray-400 hover:text-red-600 transition-colors" onclick={() => handleCancel(item.id)}>
+              <span class="text-gray-100 text-sm font-bold font-mono">{(item.progress || 0).toFixed(0)}%</span>
+              <button class="text-gray-500 hover:text-red-400 transition-colors" onclick={() => handleCancel(item.id)}>
                 <span class="material-symbols-outlined text-[20px]">close</span>
               </button>
             {:else if item.status === "failed"}
@@ -178,7 +178,7 @@
                 Failed
               </span>
             {:else}
-              <span class="text-gray-400 text-xs">Pending</span>
+              <span class="text-gray-500 text-xs">Pending</span>
             {/if}
           </div>
         </div>

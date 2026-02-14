@@ -189,13 +189,13 @@
 
 <div class="flex flex-col h-screen overflow-hidden bg-yt-bg">
   <!-- Top Header Bar -->
-  <header class="h-12 bg-yt-surface border-b border-gray-200 flex items-center justify-between px-5 shrink-0 z-30">
+  <header class="h-12 bg-yt-surface border-b border-white/[0.06] flex items-center justify-between px-5 shrink-0 z-30">
     <!-- Left: Logo -->
     <a href="/tools/ytdlp" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
       <div class="w-7 h-7 rounded-lg bg-yt-primary flex items-center justify-center text-white shrink-0">
         <span class="material-symbols-outlined text-[20px]">download</span>
       </div>
-      <h1 class="font-display font-bold text-base text-gray-900">Modern YT-DLP GUI</h1>
+      <h1 class="font-display font-bold text-base text-gray-100">Modern YT-DLP GUI</h1>
     </a>
 
     <!-- Right: Actions -->
@@ -204,7 +204,7 @@
       <div class="relative">
         <button
           onclick={() => popupOpen = !popupOpen}
-          class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors relative {queueBounce ? 'animate-queue-bounce' : ''}"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/[0.06] hover:text-gray-100 transition-colors relative {queueBounce ? 'animate-queue-bounce' : ''}"
           title="Active Downloads"
         >
           <span class="material-symbols-outlined text-[20px]">downloading</span>
@@ -217,13 +217,13 @@
         </button>
       </div>
 
-      <div class="h-6 w-px bg-gray-200 mx-1"></div>
+      <div class="h-6 w-px bg-white/[0.06] mx-1"></div>
 
       {#each navItems as item}
         <a
           href={item.href}
           class="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm
-            {isActive(item.href) ? 'bg-yt-primary/10 text-yt-primary font-medium' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'}"
+            {isActive(item.href) ? 'bg-yt-primary/10 text-yt-primary font-medium' : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-100'}"
         >
           <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
           <span class="hidden sm:inline">{item.label}</span>
@@ -234,7 +234,7 @@
 
   <!-- Main Content -->
   <main class="flex-1 flex overflow-hidden relative">
-    <div class="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-yt-primary/5 to-transparent pointer-events-none z-0"></div>
+    <div class="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-yt-primary/[0.03] to-transparent pointer-events-none z-0"></div>
 
     {#if checking}
       <div class="flex-1 flex items-center justify-center z-10">
@@ -248,11 +248,11 @@
         <div class="w-16 h-16 rounded-xl bg-yt-primary/20 flex items-center justify-center">
           <span class="material-symbols-outlined text-yt-primary text-4xl">download</span>
         </div>
-        <h2 class="font-display text-2xl font-bold text-gray-900">yt-dlp 설정 필요</h2>
+        <h2 class="font-display text-2xl font-bold text-gray-100">yt-dlp 설정 필요</h2>
         <p class="text-gray-400">YouTube 다운로드를 위해 yt-dlp를 설치해야 합니다.</p>
 
         {#if installError}
-          <div class="bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-3 text-red-600 text-sm max-w-md">
+          <div class="bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-3 text-red-400 text-sm max-w-md">
             {installError}
           </div>
         {/if}
@@ -264,7 +264,7 @@
           </div>
         {:else}
           <button
-            class="px-8 py-3 rounded-xl bg-yt-primary hover:bg-blue-600 text-white font-bold transition-all shadow-lg shadow-yt-primary/20"
+            class="px-8 py-3 rounded-xl bg-yt-primary hover:bg-blue-500 text-white font-bold transition-all shadow-lg shadow-yt-primary/20"
             onclick={handleInstall}
           >
             yt-dlp 설치하기
@@ -282,26 +282,26 @@
   {#if popupOpen}
     <!-- Backdrop -->
     <button
-      class="fixed inset-0 bg-black/20 z-40"
+      class="fixed inset-0 bg-black/50 z-40"
       onclick={() => popupOpen = false}
       aria-label="Close popup"
     ></button>
 
     <!-- Floating Popup -->
-    <div class="fixed top-12 right-4 w-96 max-h-[70vh] bg-yt-surface rounded-xl shadow-2xl z-50 flex flex-col border border-gray-200 animate-popup-in">
+    <div class="fixed top-12 right-4 w-96 max-h-[70vh] bg-yt-surface rounded-xl shadow-2xl shadow-black/40 z-50 flex flex-col border border-white/[0.06] animate-popup-in">
       <!-- Header -->
-      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-        <h3 class="font-display font-semibold text-sm text-gray-900">Queue</h3>
+      <div class="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+        <h3 class="font-display font-semibold text-sm text-gray-100">Queue</h3>
         <div class="flex items-center gap-1">
           {#if (activeCount + pendingCount) > 0}
             <button
               onclick={handleCancelAll}
-              class="text-amber-600 hover:bg-amber-500/10 text-xs font-medium px-2 py-1 rounded-lg transition-colors"
+              class="text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-2 py-1 rounded-lg transition-colors"
             >
               Cancel All
             </button>
           {/if}
-          <button onclick={() => popupOpen = false} class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
+          <button onclick={() => popupOpen = false} class="text-gray-500 hover:text-gray-400 transition-colors p-1 rounded-lg hover:bg-white/[0.06]">
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
@@ -311,27 +311,27 @@
       <div class="flex-1 overflow-y-auto hide-scrollbar">
         {#if activeDownloads.length === 0}
           <div class="flex flex-col items-center justify-center py-12 text-center px-4">
-            <span class="material-symbols-outlined text-gray-300 text-4xl">cloud_done</span>
+            <span class="material-symbols-outlined text-gray-600 text-4xl">cloud_done</span>
             <p class="text-gray-400 text-sm mt-2">활성 다운로드가 없습니다</p>
           </div>
         {:else}
           <div class="p-3 space-y-2">
             {#each activeDownloads as item}
-              <div class="bg-yt-highlight rounded-lg p-3 border border-gray-200 {item.status === 'downloading' ? '!border-yt-primary/30' : ''}">
-                <p class="text-sm text-gray-900 truncate font-medium">{item.title}</p>
+              <div class="bg-yt-highlight rounded-lg p-3 border border-white/[0.06] {item.status === 'downloading' ? '!border-yt-primary/30' : ''}">
+                <p class="text-sm text-gray-100 truncate font-medium">{item.title}</p>
                 <div class="flex items-center justify-between mt-1.5">
                   {#if item.status === "downloading"}
                     <span class="text-xs text-yt-primary font-mono">{(item.progress || 0).toFixed(0)}%</span>
                     <span class="text-xs text-gray-400">{item.speed || "..."}</span>
                   {:else}
-                    <span class="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                    <span class="inline-flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
                       <span class="material-symbols-outlined text-[14px]">schedule</span>
                       Queued
                     </span>
                   {/if}
                 </div>
                 {#if item.status === "downloading"}
-                  <div class="w-full bg-gray-200 rounded-full h-1 mt-2">
+                  <div class="w-full bg-white/[0.06] rounded-full h-1 mt-2">
                     <div class="bg-yt-primary h-1 rounded-full transition-all" style="width: {item.progress || 0}%"></div>
                   </div>
                 {/if}
@@ -342,7 +342,7 @@
 
         <!-- Recent Completed -->
         {#if recentCompleted.length > 0}
-          <div class="border-t border-gray-200 mt-2">
+          <div class="border-t border-white/[0.06] mt-2">
             <div class="px-4 py-2">
               <h4 class="text-xs text-gray-400 font-medium uppercase tracking-wider">Recent</h4>
             </div>
@@ -350,7 +350,7 @@
               {#each recentCompleted as item}
                 <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg">
                   <span class="material-symbols-outlined text-green-600 text-[16px]">check_circle</span>
-                  <span class="text-sm text-gray-600 truncate">{item.title}</span>
+                  <span class="text-sm text-gray-400 truncate">{item.title}</span>
                 </div>
               {/each}
             </div>
@@ -359,8 +359,8 @@
       </div>
 
       <!-- Footer: View All -->
-      <div class="border-t border-gray-200 px-4 py-2.5 shrink-0">
-        <a href="/tools/ytdlp/queue" class="flex items-center justify-center gap-1.5 text-sm text-yt-primary hover:text-blue-700 font-medium transition-colors" onclick={() => popupOpen = false}>
+      <div class="border-t border-white/[0.06] px-4 py-2.5 shrink-0">
+        <a href="/tools/ytdlp/queue" class="flex items-center justify-center gap-1.5 text-sm text-yt-primary hover:text-blue-400 font-medium transition-colors" onclick={() => popupOpen = false}>
           <span>View All</span>
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
         </a>
@@ -371,7 +371,7 @@
   <!-- Toast Notification -->
   {#if toastVisible}
     <div class="fixed bottom-6 right-6 z-[60] animate-toast-in">
-      <div class="flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl">
+      <div class="flex items-center gap-3 bg-white/10 backdrop-blur-xl text-white px-5 py-3 rounded-xl shadow-2xl">
         <span class="material-symbols-outlined text-[20px] {toastIcon === 'download_done' ? 'text-green-400' : 'text-yt-primary'}">{toastIcon}</span>
         <span class="text-sm font-medium">{toastMessage}</span>
       </div>
