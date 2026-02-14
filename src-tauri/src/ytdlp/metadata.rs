@@ -8,25 +8,71 @@ use tauri::AppHandle;
 // Regex patterns for YouTube URL validation
 static VIDEO_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/shorts/([a-zA-Z0-9_-]{11})").unwrap(),
+        Regex::new(
+            r"^https?://(?:(?:www|m|music)\.)?youtube\.com/watch\?(?:.*&)?v=([a-zA-Z0-9_-]{11})(?:[&#].*)?$",
+        )
+        .unwrap(),
+        Regex::new(r"^https?://(?:www\.)?youtu\.be/([a-zA-Z0-9_-]{11})(?:[?#].*)?$").unwrap(),
+        Regex::new(r"^https?://(?:(?:www|m)\.)?youtube\.com/shorts/([a-zA-Z0-9_-]{11})(?:[?#].*)?$").unwrap(),
     ]
 });
 
 static PLAYLIST_PATTERN: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"^https?://(?:www\.)?youtube\.com/playlist\?list=([a-zA-Z0-9_-]+)").unwrap()
+    Regex::new(r"^https?://(?:(?:www|m|music)\.)?youtube\.com/(?:playlist\?(?:.*&)?list=|watch\?(?:.*&)?list=)([a-zA-Z0-9_-]+)(?:[&#].*)?$").unwrap()
 });
 
 static CHANNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/channel/([a-zA-Z0-9_-]+)").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/@([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)")
+        Regex::new(r"^https?://(?:(?:www|m|music)\.)?youtube\.com/channel/([a-zA-Z0-9_-]+)(?:[?#].*)?$").unwrap(),
+        Regex::new(r"^https?://(?:(?:www|m|music)\.)?youtube\.com/@([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)(?:[?#].*)?$")
             .unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/c/([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)")
+        Regex::new(r"^https?://(?:(?:www|m|music)\.)?youtube\.com/c/([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)(?:[?#].*)?$")
             .unwrap(),
     ]
 });
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_url, UrlType};
+
+    #[test]
+    fn validate_mobile_watch_url() {
+        let result = validate_url("https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=15s".to_string())
+            .expect("validation should succeed");
+
+        assert!(result.valid);
+        assert!(matches!(result.url_type, UrlType::Video));
+        assert_eq!(
+            result.normalized_url,
+            Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ".to_string())
+        );
+    }
+
+    #[test]
+    fn validate_watch_url_where_v_is_not_first_query_param() {
+        let result =
+            validate_url("https://www.youtube.com/watch?si=abcdefg1234&v=dQw4w9WgXcQ".to_string())
+                .expect("validation should succeed");
+
+        assert!(result.valid);
+        assert!(matches!(result.url_type, UrlType::Video));
+    }
+
+    #[test]
+    fn validate_playlist_url_with_extra_query_params() {
+        let result = validate_url(
+            "https://m.youtube.com/playlist?si=abc123&list=PLdQw4w9WgXcQ123".to_string(),
+        )
+        .expect("validation should succeed");
+
+        assert!(result.valid);
+        assert!(matches!(result.url_type, UrlType::Playlist));
+        assert_eq!(
+            result.normalized_url,
+            Some("https://www.youtube.com/playlist?list=PLdQw4w9WgXcQ123".to_string())
+        );
+    }
+}
 
 /// Validate if a URL is a valid YouTube URL
 #[tauri::command]
