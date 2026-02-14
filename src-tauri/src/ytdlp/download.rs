@@ -297,10 +297,6 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let mut cmd = binary::command_with_path(&ytdlp_path);
     cmd.args(&args);
 
-    // Disable Python's stdout buffering and ensure UTF-8 output on Windows
-    cmd.env("PYTHONUNBUFFERED", "1");
-    cmd.env("PYTHONIOENCODING", "utf-8");
-
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());

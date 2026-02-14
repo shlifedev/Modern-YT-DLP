@@ -59,10 +59,19 @@ fn augmented_path() -> String {
     extra.join(PATH_SEP)
 }
 
-/// Create a Command with augmented PATH environment variable.
+/// Create a Command with augmented PATH and Python UTF-8 environment variables.
+///
+/// - `PYTHONUTF8=1`: Forces all text I/O to UTF-8 (PEP 540), fixes cp949 file I/O errors on Korean Windows
+/// - `PYTHONIOENCODING=utf-8`: Forces stdin/stdout/stderr to UTF-8
+/// - `PYTHONUNBUFFERED=1`: Disables stdout buffering for real-time progress output
+///
+/// These are harmless no-ops for non-Python programs (ffmpeg, where/which).
 pub fn command_with_path(program: &str) -> tokio::process::Command {
     let mut cmd = tokio::process::Command::new(program);
     cmd.env("PATH", augmented_path());
+    cmd.env("PYTHONUTF8", "1");
+    cmd.env("PYTHONIOENCODING", "utf-8");
+    cmd.env("PYTHONUNBUFFERED", "1");
     cmd
 }
 
