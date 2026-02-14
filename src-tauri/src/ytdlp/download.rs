@@ -182,6 +182,11 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
     Ok(task_id)
 }
 
+/// Public wrapper for execute_download (used by retry_download in commands.rs)
+pub async fn execute_download_public(app: AppHandle, task_id: u64) {
+    execute_download(app, task_id).await;
+}
+
 async fn execute_download(app: AppHandle, task_id: u64) {
     let db_state = app.state::<crate::DbState>();
     let manager = app.state::<Arc<DownloadManager>>();
@@ -630,6 +635,11 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     // Release the download slot and process next pending
     manager.unregister_cancel(task_id);
     manager.release();
+    process_next_pending(app);
+}
+
+/// Public wrapper for process_next_pending (used by retry_download in commands.rs)
+pub fn process_next_pending_public(app: AppHandle) {
     process_next_pending(app);
 }
 
