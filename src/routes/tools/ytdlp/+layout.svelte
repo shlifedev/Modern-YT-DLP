@@ -15,6 +15,7 @@
   let installMessage = $state("")
   let installError = $state("")
   let ytdlpDebug = $state("")
+  let showDebug = $state(false)
 
   // Popup state
   let popupOpen = $state(false)
@@ -151,14 +152,23 @@
     loadActiveDownloads()
 
     window.addEventListener("queue-added", handleQueueAdded)
+    window.addEventListener("keydown", handleDebugKey)
   })
 
   onDestroy(() => {
     stopPopupRefresh()
     if (unlisten) unlisten()
     window.removeEventListener("queue-added", handleQueueAdded)
+    window.removeEventListener("keydown", handleDebugKey)
     if (toastTimeout) clearTimeout(toastTimeout)
   })
+
+  function handleDebugKey(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "D") {
+      e.preventDefault()
+      showDebug = !showDebug
+    }
+  }
 
   async function checkDeps() {
     checking = true
@@ -276,11 +286,8 @@
           </div>
         {/if}
 
-        {#if ytdlpDebug}
-          <details class="max-w-md w-full">
-            <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-400">Debug info</summary>
-            <pre class="mt-2 text-xs text-gray-500 bg-white/[0.03] rounded-lg p-3 whitespace-pre-wrap break-all">{ytdlpDebug}</pre>
-          </details>
+        {#if showDebug && ytdlpDebug}
+          <pre class="text-xs text-gray-500 bg-white/[0.03] rounded-lg p-3 max-w-md w-full whitespace-pre-wrap break-all">{ytdlpDebug}</pre>
         {/if}
 
         {#if installing}
