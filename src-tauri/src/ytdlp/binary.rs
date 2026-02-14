@@ -38,12 +38,12 @@ pub async fn resolve_ytdlp_path(app_data_dir: &Path) -> Result<PathBuf, AppError
     // Resolve the path
     let app_data_dir = app_data_dir.to_path_buf();
     let local_path = get_ytdlp_path(&app_data_dir);
-    if local_path.exists() && try_get_version(&local_path).await.is_some() {
+    if local_path.exists() && try_get_version(&local_path).await.is_ok() {
         let mut cache = RESOLVED_YTDLP.write().unwrap_or_else(|e| e.into_inner());
         *cache = Some(local_path.clone());
         return Ok(local_path);
     }
-    if try_get_version(Path::new("yt-dlp")).await.is_some() {
+    if try_get_version(Path::new("yt-dlp")).await.is_ok() {
         let path = PathBuf::from("yt-dlp");
         let mut cache = RESOLVED_YTDLP.write().unwrap_or_else(|e| e.into_inner());
         *cache = Some(path.clone());
@@ -70,38 +70,83 @@ pub fn get_ffmpeg_path(app_data_dir: &Path) -> PathBuf {
     }
 }
 
-/// Check if yt-dlp is installed, return version if so.
+/// Check if yt-dlp is installed, return (version, debug_info).
 /// Checks the app's local binary first, then falls back to system PATH.
-pub async fn check_ytdlp(app_data_dir: &Path) -> Option<String> {
+/// When version is None, debug_info explains why.
+pub async fn check_ytdlp(app_data_dir: &Path) -> (Option<String>, Option<String>) {
+    let mut debug_lines: Vec<String> = Vec::new();
+
     // First try the app's local binary
     let ytdlp_path = get_ytdlp_path(app_data_dir);
-    if ytdlp_path.exists() {
-        if let Some(version) = try_get_version(&ytdlp_path).await {
-            return Some(version);
+    let exists = ytdlp_path.exists();
+    debug_lines.push(format!("local: {} (exists={})", ytdlp_path.display(), exists));
+
+    if exists {
+        // Check file metadata
+        if let Ok(meta) = std::fs::metadata(&ytdlp_path) {
+            debug_lines.push(format!("  size={} bytes", meta.len()));
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                debug_lines.push(format!("  mode={:o}", meta.permissions().mode()));
+            }
+        }
+
+        match try_get_version(&ytdlp_path).await {
+            Ok(version) => return (Some(version), None),
+            Err(reason) => {
+                debug_lines.push(format!("  FAIL: {}", reason));
+            }
         }
     }
 
     // Fall back to system PATH (e.g. homebrew, pip)
-    try_get_version(Path::new("yt-dlp")).await
+    debug_lines.push("fallback: system PATH 'yt-dlp'".to_string());
+    match try_get_version(Path::new("yt-dlp")).await {
+        Ok(version) => return (Some(version), None),
+        Err(reason) => {
+            debug_lines.push(format!("  FAIL: {}", reason));
+        }
+    }
+
+    (None, Some(debug_lines.join("\n")))
 }
 
-async fn try_get_version(binary_path: &Path) -> Option<String> {
-    let output = tokio::time::timeout(
+/// Try to get version from a binary. Returns Ok(version) or Err(reason).
+async fn try_get_version(binary_path: &Path) -> Result<String, String> {
+    let timeout_result = tokio::time::timeout(
         Duration::from_secs(5),
         tokio::process::Command::new(binary_path)
             .arg("--version")
             .output(),
     )
-    .await
-    .ok()?
-    .ok()?;
+    .await;
+
+    let cmd_result = match timeout_result {
+        Ok(result) => result,
+        Err(_) => {
+            return Err(format!("timeout (5s) executing {}", binary_path.display()));
+        }
+    };
+
+    let output = match cmd_result {
+        Ok(output) => output,
+        Err(e) => {
+            return Err(format!("exec error: {} ({})", e, e.kind()));
+        }
+    };
 
     if output.status.success() {
         String::from_utf8(output.stdout)
-            .ok()
             .map(|s| s.trim().to_string())
+            .map_err(|e| format!("invalid utf8 in stdout: {}", e))
     } else {
-        None
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!(
+            "exit code={}, stderr={}",
+            output.status,
+            stderr.trim()
+        ))
     }
 }
 
@@ -134,7 +179,7 @@ pub async fn check_ffmpeg(app_data_dir: &Path) -> Option<String> {
 
 /// Get full dependency status
 pub async fn check_dependencies(app_data_dir: &Path) -> DependencyStatus {
-    let ytdlp_version = check_ytdlp(app_data_dir).await;
+    let (ytdlp_version, ytdlp_debug) = check_ytdlp(app_data_dir).await;
     let ffmpeg_version = check_ffmpeg(app_data_dir).await;
 
     DependencyStatus {
@@ -142,6 +187,7 @@ pub async fn check_dependencies(app_data_dir: &Path) -> DependencyStatus {
         ytdlp_version,
         ffmpeg_installed: ffmpeg_version.is_some(),
         ffmpeg_version,
+        ytdlp_debug,
     }
 }
 
@@ -187,8 +233,16 @@ pub async fn download_ytdlp(
         .await
         .map_err(|e| AppError::DownloadError(format!("Failed to read response: {}", e)))?;
 
+    log::debug!(
+        "[binary] download_ytdlp: downloaded {} bytes, writing to {}",
+        bytes.len(),
+        ytdlp_path.display()
+    );
+
     std::fs::write(&ytdlp_path, &bytes)
         .map_err(|e| AppError::Custom(format!("Failed to write yt-dlp binary: {}", e)))?;
+
+    log::debug!("[binary] download_ytdlp: file written successfully");
 
     #[cfg(unix)]
     {
@@ -200,19 +254,38 @@ pub async fn download_ytdlp(
         std::fs::set_permissions(&ytdlp_path, perms).map_err(|e| {
             AppError::Custom(format!("Failed to set executable permissions: {}", e))
         })?;
+        log::debug!("[binary] download_ytdlp: chmod 755 applied");
     }
 
     // Remove macOS quarantine attribute so Gatekeeper doesn't block execution
     #[cfg(target_os = "macos")]
     {
-        let _ = std::process::Command::new("xattr")
+        let xattr_result = std::process::Command::new("xattr")
             .args(["-d", "com.apple.quarantine"])
             .arg(&ytdlp_path)
             .output();
+        match &xattr_result {
+            Ok(output) => {
+                if output.status.success() {
+                    log::debug!("[binary] download_ytdlp: xattr quarantine removed");
+                } else {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    log::warn!(
+                        "[binary] download_ytdlp: xattr failed (exit={}): {}",
+                        output.status,
+                        stderr.trim()
+                    );
+                }
+            }
+            Err(e) => {
+                log::warn!("[binary] download_ytdlp: xattr command error: {}", e);
+            }
+        }
     }
 
     // 2-5: Clear cached path so resolve_ytdlp_path picks up the newly installed binary
     clear_ytdlp_cache();
+    log::debug!("[binary] download_ytdlp: cache cleared");
 
     let _ = on_event.send(InstallEvent::Completed {
         dependency: "yt-dlp".to_string(),

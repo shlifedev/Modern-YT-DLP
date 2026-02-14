@@ -198,6 +198,8 @@ pub struct DependencyStatus {
     pub ytdlp_version: Option<String>,
     pub ffmpeg_installed: bool,
     pub ffmpeg_version: Option<String>,
+    /// Diagnostic info when ytdlp check fails (path tried, error reason)
+    pub ytdlp_debug: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, specta::Type)]

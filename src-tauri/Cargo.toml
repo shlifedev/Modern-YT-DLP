@@ -45,4 +45,5 @@ chrono = "0.4"
 reqwest = { version = "0.12", features = ["rustls-tls", "stream"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 regex = "1"
+log = "0.4"
 

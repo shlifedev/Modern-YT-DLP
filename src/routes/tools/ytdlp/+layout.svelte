@@ -14,6 +14,7 @@
   let installing = $state(false)
   let installMessage = $state("")
   let installError = $state("")
+  let ytdlpDebug = $state("")
 
   // Popup state
   let popupOpen = $state(false)
@@ -165,6 +166,7 @@
       const result = await commands.checkDependencies()
       if (result.status === "ok") {
         depsInstalled = result.data.ytdlpInstalled
+        ytdlpDebug = result.data.ytdlpDebug ?? ""
       }
     } catch (e) {
       console.error(e)
@@ -272,6 +274,13 @@
           <div class="bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-3 text-red-400 text-sm max-w-md">
             {installError}
           </div>
+        {/if}
+
+        {#if ytdlpDebug}
+          <details class="max-w-md w-full">
+            <summary class="text-xs text-gray-500 cursor-pointer hover:text-gray-400">Debug info</summary>
+            <pre class="mt-2 text-xs text-gray-500 bg-white/[0.03] rounded-lg p-3 whitespace-pre-wrap break-all">{ytdlpDebug}</pre>
+          </details>
         {/if}
 
         {#if installing}
