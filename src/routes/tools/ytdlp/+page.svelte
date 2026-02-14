@@ -560,6 +560,14 @@
         </div>
       {/if}
 
+      <!-- Analyzing Indicator -->
+      {#if analyzing}
+        <div class="bg-blue-500/10 rounded-lg px-4 py-2 flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-500 text-[18px] animate-spin">progress_activity</span>
+          <span class="text-blue-600 text-xs font-medium">메타데이터를 조회하는 중...</span>
+        </div>
+      {/if}
+
       <!-- URL Input -->
       <div class="flex flex-col lg:flex-row gap-2">
         <div class="flex-1 relative group">
