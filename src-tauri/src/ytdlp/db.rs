@@ -39,6 +39,10 @@ impl Database {
         let conn =
             Connection::open(&db_path).map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
+        // Enable WAL mode for better write performance and crash resilience
+        conn.execute_batch("PRAGMA journal_mode=WAL;")
+            .map_err(|e| AppError::DatabaseError(format!("Failed to set WAL mode: {}", e)))?;
+
         Self::create_tables(&conn)?;
 
         Ok(Self {

@@ -66,16 +66,36 @@ pub fn info(message: &str) {
     write_log("INFO", message);
 }
 
-/// Read the last N lines from the log file
+/// Read the last N lines from the log file.
+/// Caps read to the last 512KB to avoid OOM on large log files.
 pub fn read_recent_logs(max_lines: usize) -> String {
+    use std::io::{Read, Seek, SeekFrom};
+
     let Some(log_path) = get_log_path() else {
         return "Logger not initialized".to_string();
     };
 
-    let content = match fs::read_to_string(log_path) {
-        Ok(c) => c,
+    let mut file = match fs::File::open(log_path) {
+        Ok(f) => f,
         Err(e) => return format!("Failed to read log file: {}", e),
     };
+
+    let metadata = match file.metadata() {
+        Ok(m) => m,
+        Err(e) => return format!("Failed to read log file metadata: {}", e),
+    };
+
+    // Only read the tail of the file (max 512KB) to prevent OOM
+    const MAX_READ_BYTES: u64 = 512 * 1024;
+    let file_len = metadata.len();
+    if file_len > MAX_READ_BYTES {
+        let _ = file.seek(SeekFrom::End(-(MAX_READ_BYTES as i64)));
+    }
+
+    let mut content = String::new();
+    if let Err(e) = file.read_to_string(&mut content) {
+        return format!("Failed to read log file: {}", e);
+    }
 
     let lines: Vec<&str> = content.lines().collect();
     let start = lines.len().saturating_sub(max_lines);

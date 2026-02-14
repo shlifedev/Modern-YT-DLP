@@ -267,10 +267,13 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let settings = match settings::get_settings(&app) {
         Ok(s) => s,
         Err(e) => {
-            logger::error(&format!(
-                "[download:{}] failed to get settings: {}",
-                task_id, e
-            ));
+            let error_msg = format!("Failed to load settings: {}", e);
+            logger::error(&format!("[download:{}] {}", task_id, error_msg));
+            let _ = db_state.update_download_status(
+                task_id,
+                &DownloadStatus::Failed,
+                Some(&error_msg),
+            );
             manager.release();
             process_next_pending(app);
             return;
@@ -376,6 +379,17 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let stdout = match child.stdout.take() {
         Some(s) => s,
         None => {
+            logger::error(&format!(
+                "[download:{}] failed to capture stdout from yt-dlp process",
+                task_id
+            ));
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            let _ = db_state.update_download_status(
+                task_id,
+                &DownloadStatus::Failed,
+                Some("Internal error: failed to capture process output"),
+            );
             manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
@@ -386,6 +400,17 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let stderr = match child.stderr.take() {
         Some(s) => s,
         None => {
+            logger::error(&format!(
+                "[download:{}] failed to capture stderr from yt-dlp process",
+                task_id
+            ));
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            let _ = db_state.update_download_status(
+                task_id,
+                &DownloadStatus::Failed,
+                Some("Internal error: failed to capture process output"),
+            );
             manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
@@ -457,12 +482,17 @@ async fn execute_download(app: AppHandle, task_id: u64) {
                 );
 
                 // Update DB progress
-                let _ = db_state_clone.update_download_progress(
+                if let Err(e) = db_state_clone.update_download_progress(
                     task_id,
                     progress_info.percent,
                     Some(&speed),
                     Some(&eta),
-                );
+                ) {
+                    logger::warn(&format!(
+                        "[download:{}] failed to update progress in DB: {}",
+                        task_id, e
+                    ));
+                }
 
                 last_progress_percent = Some(progress_info.percent);
                 last_progress_update = now;
