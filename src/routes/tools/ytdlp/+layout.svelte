@@ -161,19 +161,18 @@
     if (toastTimeout) clearTimeout(toastTimeout)
   })
 
-  async function handleDebugKey(e: KeyboardEvent) {
+  function handleDebugKey(e: KeyboardEvent) {
     if (e.key === "F10") {
       e.preventDefault()
-      if (!showDebug) {
-        // Refresh debug info when opening
-        try {
-          const result = await commands.checkDependencies()
+      showDebug = !showDebug
+      if (showDebug) {
+        // Refresh debug info after overlay is shown
+        commands.checkDependencies().then(result => {
           if (result.status === "ok") {
             ytdlpDebug = result.data.ytdlpDebug ?? ""
           }
-        } catch (_) {}
+        }).catch(() => {})
       }
-      showDebug = !showDebug
     }
   }
 
