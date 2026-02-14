@@ -87,6 +87,11 @@ routes/
 
 **UI Stack**: Tailwind CSS v4, Skeleton UI v4 (`@skeletonlabs/skeleton-svelte`), Material Symbols icons. Custom CSS variables: `yt-bg`, `yt-surface`, `yt-highlight`, `yt-primary`.
 
+## Documentation
+
+- `README.md` (English, main) + 10 translations in `docs/`: ko, ja, zh-CN, zh-TW, es, fr, de, pt-BR, ru, vi
+- When updating README content, update all 11 files to keep translations in sync
+
 ## Conventions
 
 ### Rust
