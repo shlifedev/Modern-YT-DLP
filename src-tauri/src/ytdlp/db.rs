@@ -46,6 +46,11 @@ impl Database {
         })
     }
 
+    // 1-5: Helper to handle Mutex poisoning gracefully
+    fn conn(&self) -> std::sync::MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     fn create_tables(conn: &Connection) -> Result<(), AppError> {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS downloads (
@@ -92,7 +97,7 @@ impl Database {
         req: &DownloadRequest,
         output_path: &str,
     ) -> Result<u64, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let created_at = chrono::Utc::now().timestamp();
 
         conn.execute(
@@ -118,7 +123,7 @@ impl Database {
         status: &DownloadStatus,
         error_msg: Option<&str>,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         conn.execute(
             "UPDATE downloads SET status = ?1, error_message = ?2 WHERE id = ?3",
@@ -136,7 +141,7 @@ impl Database {
         speed: Option<&str>,
         eta: Option<&str>,
     ) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         conn.execute(
             "UPDATE downloads SET progress = ?1, speed = ?2, eta = ?3 WHERE id = ?4",
@@ -148,7 +153,7 @@ impl Database {
     }
 
     pub fn get_download_queue(&self) -> Result<Vec<DownloadTaskInfo>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(&format!(
                 "SELECT {} FROM downloads ORDER BY created_at DESC",
@@ -166,7 +171,7 @@ impl Database {
     }
 
     pub fn clear_completed(&self) -> Result<u32, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         let deleted = conn
             .execute("DELETE FROM downloads WHERE status = 'completed'", [])
@@ -176,7 +181,7 @@ impl Database {
     }
 
     pub fn get_download(&self, id: u64) -> Result<Option<DownloadTaskInfo>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(&format!(
                 "SELECT {} FROM downloads WHERE id = ?1",
@@ -194,7 +199,7 @@ impl Database {
     }
 
     pub fn mark_completed(&self, id: u64, completed_at: i64) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         conn.execute(
             "UPDATE downloads SET status = 'completed', completed_at = ?1, progress = 100.0 WHERE id = ?2",
@@ -205,7 +210,7 @@ impl Database {
     }
 
     pub fn insert_history(&self, item: &HistoryItem) -> Result<u64, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         conn.execute(
             "INSERT INTO history (video_url, video_id, title, quality_label, format, file_path, file_size, downloaded_at)
@@ -231,7 +236,7 @@ impl Database {
         page_size: u32,
         search: Option<&str>,
     ) -> Result<HistoryResult, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         let (where_clause, search_param) = if let Some(s) = search {
             ("WHERE title LIKE ?1", format!("%{}%", s))
@@ -302,7 +307,7 @@ impl Database {
     }
 
     pub fn check_duplicate(&self, video_id: &str) -> Result<Option<HistoryItem>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let mut stmt = conn.prepare(
             "SELECT id, video_url, video_id, title, quality_label, format, file_path, file_size, downloaded_at
              FROM history
@@ -333,7 +338,7 @@ impl Database {
     }
 
     pub fn delete_history(&self, id: u64) -> Result<(), AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
 
         conn.execute("DELETE FROM history WHERE id = ?1", params![id])
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
@@ -342,7 +347,7 @@ impl Database {
     }
 
     pub fn get_next_pending(&self) -> Result<Option<DownloadTaskInfo>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(&format!(
                 "SELECT {} FROM downloads WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1",
@@ -360,7 +365,7 @@ impl Database {
     }
 
     pub fn get_active_count(&self) -> Result<u32, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let count: u32 = conn
             .query_row(
                 "SELECT COUNT(*) FROM downloads WHERE status = 'downloading'",
@@ -372,7 +377,7 @@ impl Database {
     }
 
     pub fn get_active_downloads(&self) -> Result<Vec<DownloadTaskInfo>, AppError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn();
         let mut stmt = conn
             .prepare(&format!(
                 "SELECT {} FROM downloads WHERE status IN ('downloading', 'pending') ORDER BY created_at ASC",

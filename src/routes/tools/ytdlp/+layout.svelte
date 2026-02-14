@@ -41,7 +41,7 @@
       if (result.status === "ok") {
         activeDownloads = result.data
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load active downloads:", e) }
   }
 
   async function loadRecentCompleted() {
@@ -50,7 +50,7 @@
       if (result.status === "ok") {
         recentCompleted = result.data.filter((d: any) => d.status === "completed").slice(0, 5)
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load recent completed:", e) }
   }
 
   function startPopupRefresh() {
@@ -69,12 +69,14 @@
     }
   }
 
+  // 3-1: Return cleanup function to prevent interval leak
   $effect(() => {
     if (popupOpen) {
       startPopupRefresh()
     } else {
       stopPopupRefresh()
     }
+    return () => { stopPopupRefresh() }
   })
 
   onMount(async () => {
@@ -85,7 +87,7 @@
         loadActiveDownloads()
       })
       unlisten = unlistenFn
-    } catch {}
+    } catch (e) { console.error("Failed to listen for download events:", e) }
 
     loadActiveDownloads()
   })
@@ -161,7 +163,7 @@
           title="Active Downloads"
         >
           <span class="material-symbols-outlined text-[20px]">downloading</span>
-          <span class="text-sm hidden sm:inline">Activity</span>
+          <span class="text-sm hidden sm:inline">Queue</span>
           {#if (activeCount + pendingCount) > 0}
             <span class="absolute top-1 right-1 w-5 h-5 bg-yt-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
               {activeCount + pendingCount}
@@ -244,7 +246,7 @@
     <div class="fixed top-14 right-4 w-96 max-h-[70vh] bg-yt-surface rounded-xl shadow-2xl z-50 flex flex-col border border-gray-200 animate-popup-in">
       <!-- Header -->
       <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between shrink-0">
-        <h3 class="font-display font-semibold text-sm text-gray-900">Active Downloads</h3>
+        <h3 class="font-display font-semibold text-sm text-gray-900">Queue</h3>
         <button onclick={() => popupOpen = false} class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100">
           <span class="material-symbols-outlined text-[18px]">close</span>
         </button>
@@ -267,7 +269,10 @@
                     <span class="text-xs text-yt-primary font-mono">{(item.progress || 0).toFixed(0)}%</span>
                     <span class="text-xs text-gray-400">{item.speed || "..."}</span>
                   {:else}
-                    <span class="text-xs text-gray-400">Pending</span>
+                    <span class="inline-flex items-center gap-1 text-xs text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                      <span class="material-symbols-outlined text-[14px]">schedule</span>
+                      Queued
+                    </span>
                   {/if}
                 </div>
                 {#if item.status === "downloading"}

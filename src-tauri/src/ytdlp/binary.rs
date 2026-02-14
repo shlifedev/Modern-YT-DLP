@@ -1,11 +1,12 @@
 use super::types::{DependencyStatus, InstallEvent};
 use crate::modules::types::AppError;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 use std::time::Duration;
 use tauri::ipc::Channel;
-use tokio::sync::OnceCell;
 
-static RESOLVED_YTDLP: OnceCell<PathBuf> = OnceCell::const_new();
+// 2-5: RwLock instead of OnceCell for cache invalidation support
+static RESOLVED_YTDLP: RwLock<Option<PathBuf>> = RwLock::new(None);
 
 /// Get the binaries directory inside app data dir
 pub fn get_binaries_dir(app_data_dir: &Path) -> PathBuf {
@@ -22,28 +23,42 @@ pub fn get_ytdlp_path(app_data_dir: &Path) -> PathBuf {
     }
 }
 
-/// Resolve the actual yt-dlp binary to use at runtime (cached after first call).
+/// Resolve the actual yt-dlp binary to use at runtime (cached).
 /// Prefers the app's local binary if it works, otherwise falls back to system PATH.
+/// Cache can be cleared with `clear_ytdlp_cache()` after installation.
 pub async fn resolve_ytdlp_path(app_data_dir: &Path) -> Result<PathBuf, AppError> {
-    // Clone app_data_dir for the async closure
+    // Check cache first
+    {
+        let cache = RESOLVED_YTDLP.read().unwrap_or_else(|e| e.into_inner());
+        if let Some(path) = cache.as_ref() {
+            return Ok(path.clone());
+        }
+    }
+
+    // Resolve the path
     let app_data_dir = app_data_dir.to_path_buf();
-    RESOLVED_YTDLP
-        .get_or_try_init(|| async {
-            let local_path = get_ytdlp_path(&app_data_dir);
-            if local_path.exists()
-                && try_get_version(&local_path).await.is_some()
-            {
-                return Ok(local_path);
-            }
-            if try_get_version(Path::new("yt-dlp")).await.is_some() {
-                return Ok(PathBuf::from("yt-dlp"));
-            }
-            Err(AppError::BinaryNotFound(
-                "yt-dlp not found. Please install via Homebrew (brew install yt-dlp) or click Install.".to_string(),
-            ))
-        })
-        .await
-        .cloned()
+    let local_path = get_ytdlp_path(&app_data_dir);
+    if local_path.exists() && try_get_version(&local_path).await.is_some() {
+        let mut cache = RESOLVED_YTDLP.write().unwrap_or_else(|e| e.into_inner());
+        *cache = Some(local_path.clone());
+        return Ok(local_path);
+    }
+    if try_get_version(Path::new("yt-dlp")).await.is_some() {
+        let path = PathBuf::from("yt-dlp");
+        let mut cache = RESOLVED_YTDLP.write().unwrap_or_else(|e| e.into_inner());
+        *cache = Some(path.clone());
+        return Ok(path);
+    }
+    Err(AppError::BinaryNotFound(
+        "yt-dlp not found. Please install via Homebrew (brew install yt-dlp) or click Install."
+            .to_string(),
+    ))
+}
+
+/// Clear the cached yt-dlp path so the next call to `resolve_ytdlp_path` re-resolves.
+pub fn clear_ytdlp_cache() {
+    let mut cache = RESOLVED_YTDLP.write().unwrap_or_else(|e| e.into_inner());
+    *cache = None;
 }
 
 /// Get ffmpeg binary path
@@ -195,6 +210,9 @@ pub async fn download_ytdlp(
             .arg(&ytdlp_path)
             .output();
     }
+
+    // 2-5: Clear cached path so resolve_ytdlp_path picks up the newly installed binary
+    clear_ytdlp_cache();
 
     let _ = on_event.send(InstallEvent::Completed {
         dependency: "yt-dlp".to_string(),

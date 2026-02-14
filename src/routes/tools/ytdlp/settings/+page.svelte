@@ -17,13 +17,16 @@
   let saved = $state(false)
   let updateStatus = $state("")
 
+  // 4-3: Separate try/catch for getSettings and getAvailableBrowsers
   onMount(async () => {
     try {
       const r = await commands.getSettings()
       if (r.status === "ok") settings = r.data
+    } catch (e) { console.error("Failed to load settings:", e) }
+    try {
       browsers = await commands.getAvailableBrowsers()
-    } catch (e) { console.error(e) }
-    finally { loading = false }
+    } catch (e) { console.error("Failed to load browsers:", e) }
+    loading = false
   })
 
   async function handleSave() {
@@ -39,7 +42,7 @@
     try {
       const r = await commands.selectDownloadDirectory()
       if (r.status === "ok" && r.data) settings.downloadPath = r.data
-    } catch {}
+    } catch (e) { console.error("Failed to select directory:", e) }
   }
 
   async function handleUpdateYtdlp() {

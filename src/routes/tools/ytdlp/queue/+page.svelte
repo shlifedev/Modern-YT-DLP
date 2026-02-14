@@ -1,14 +1,19 @@
 <script lang="ts">
   import { commands } from "$lib/bindings"
-  import { onMount } from "svelte"
+  import { onMount, onDestroy } from "svelte"
 
   let queue = $state<any[]>([])
   let firstLoad = $state(true)
 
+  // 5-4: Consolidated single onMount with interval after initial load
+  let interval: ReturnType<typeof setInterval>
   onMount(async () => {
     await loadQueue()
     firstLoad = false
+    interval = setInterval(loadQueue, 2000)
   })
+
+  onDestroy(() => { if (interval) clearInterval(interval) })
 
   async function loadQueue() {
     try {
@@ -21,28 +26,32 @@
     }
   }
 
+  // 4-1: Add try/catch to prevent unhandled errors
   async function handleClearCompleted() {
-    const result = await commands.clearCompleted()
-    if (result.status === "ok") await loadQueue()
+    try {
+      const result = await commands.clearCompleted()
+      if (result.status === "ok") await loadQueue()
+    } catch (e) {
+      console.error("Failed to clear completed:", e)
+    }
   }
 
   async function handleCancel(id: number) {
-    await commands.cancelDownload(id)
-    await loadQueue()
+    try {
+      await commands.cancelDownload(id)
+      await loadQueue()
+    } catch (e) {
+      console.error("Failed to cancel download:", e)
+    }
   }
-
-  // Auto-refresh every 2 seconds
-  let interval: ReturnType<typeof setInterval>
-  onMount(() => {
-    interval = setInterval(loadQueue, 2000)
-    return () => clearInterval(interval)
-  })
 
   let activeCount = $derived(queue.filter(q => q.status === "downloading").length)
   let completedCount = $derived(queue.filter(q => q.status === "completed").length)
 
+  // 5-3: Fix formatSize(0) returning empty string
   function formatSize(bytes: number | null): string {
-    if (!bytes) return ""
+    if (bytes === null || bytes === undefined) return ""
+    if (bytes === 0) return "0 MB"
     const mb = bytes / (1024 ** 2)
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
     return `${Math.round(mb)} MB`

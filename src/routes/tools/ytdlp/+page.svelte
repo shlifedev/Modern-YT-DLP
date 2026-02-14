@@ -25,10 +25,39 @@
   let eta = $state("")
   let taskId = $state<number | null>(null)
 
+  // Auto-analyze (NOT $state to avoid being tracked by $effect)
+  let analyzeTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+  function looksLikeVideoUrl(value: string): boolean {
+    return /^https?:\/\/.+/.test(value.trim())
+  }
+
   // Settings
   let downloadPath = $state("~/Downloads")
 
   let unlisten: (() => void) | null = null
+
+  $effect(() => {
+    const currentUrl = url // Only tracked dependency
+    if (analyzeTimeoutId) {
+      clearTimeout(analyzeTimeoutId)
+      analyzeTimeoutId = null
+    }
+    if (looksLikeVideoUrl(currentUrl)) {
+      analyzeTimeoutId = setTimeout(() => {
+        // Read analyzing/downloading at execution time, not tracked by $effect
+        if (!analyzing && !downloading) {
+          handleAnalyze()
+        }
+      }, 800)
+    }
+    return () => {
+      if (analyzeTimeoutId) {
+        clearTimeout(analyzeTimeoutId)
+        analyzeTimeoutId = null
+      }
+    }
+  })
 
   onMount(async () => {
     await loadSettings()
@@ -72,20 +101,13 @@
       if (result.status === "ok") {
         downloadPath = result.data.downloadPath
       }
-    } catch {}
+    } catch (e) { console.error("Failed to load settings:", e) }
   }
 
   function extractError(err: any): string {
     if (typeof err === "string") return err
     const values = Object.values(err)
     return (values[0] as string) || "알 수 없는 오류"
-  }
-
-  async function handlePaste() {
-    try {
-      const text = await navigator.clipboard.readText()
-      if (text) url = text
-    } catch {}
   }
 
   async function handleAnalyze() {
@@ -204,7 +226,13 @@
         downloading = false
         error = extractError(result.error)
       } else {
-        taskId = result.data
+        // 3-2: Reset state for next URL and clear taskId to prevent stale events
+        downloading = false
+        downloadStatus = "idle"
+        url = ""
+        videoInfo = null
+        playlistResult = null
+        taskId = null
       }
     } catch (e: any) {
       downloadStatus = "failed"
@@ -219,7 +247,7 @@
         await commands.cancelDownload(taskId)
         downloadStatus = "cancelled"
         downloading = false
-      } catch {}
+      } catch (e) { console.error("Failed to cancel download:", e) }
     }
   }
 
@@ -233,8 +261,10 @@
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
   }
 
+  // 5-3: Fix formatSize(0) returning empty string
   function formatSize(bytes: number | null): string {
-    if (!bytes) return ""
+    if (bytes === null || bytes === undefined) return ""
+    if (bytes === 0) return "0 MB"
     const mb = bytes / (1024 ** 2)
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
     return `${Math.round(mb)} MB`
@@ -287,15 +317,15 @@
             </div>
             <div class="flex gap-2">
               <button
-                class="h-10 px-6 rounded-xl bg-yt-surface hover:bg-gray-100 text-gray-600 font-medium flex items-center gap-2 transition-colors border border-gray-200"
-                onclick={handlePaste}
-                disabled={analyzing || downloading}
+                class="h-10 px-6 rounded-xl bg-yt-primary hover:bg-blue-600 text-white font-bold flex items-center gap-2 transition-all shadow-lg shadow-yt-primary/20 disabled:opacity-50"
+                onclick={handleStartDownload}
+                disabled={downloading || !url.trim()}
               >
-                <span class="material-symbols-outlined text-[20px]">content_paste</span>
-                <span>Paste</span>
+                <span class="material-symbols-outlined text-[20px]">download</span>
+                <span>Download</span>
               </button>
               <button
-                class="h-10 px-6 rounded-xl bg-yt-primary hover:bg-blue-600 text-white font-bold flex items-center gap-2 transition-all shadow-lg shadow-yt-primary/20 disabled:opacity-50"
+                class="h-10 px-6 rounded-xl bg-yt-surface hover:bg-gray-100 text-gray-600 font-medium flex items-center gap-2 transition-colors border border-gray-200 disabled:opacity-50"
                 onclick={handleAnalyze}
                 disabled={analyzing || downloading || !url.trim()}
               >
@@ -492,27 +522,5 @@
         </div>
       {/if}
 
-      <!-- Start Download Button -->
-      <div class="mt-4">
-        <button
-          class="w-full group relative overflow-hidden rounded-xl bg-gradient-to-r from-yt-primary to-blue-600 p-[1px] focus:outline-none focus:ring-2 focus:ring-yt-primary focus:ring-offset-2 focus:ring-offset-yt-bg disabled:opacity-50 disabled:cursor-not-allowed"
-          onclick={handleStartDownload}
-          disabled={downloading || (!videoInfo && !url.trim())}
-        >
-          <div class="relative h-11 bg-yt-surface group-hover:bg-opacity-0 transition-all rounded-xl flex items-center justify-center gap-3">
-            <div class="absolute inset-0 bg-gradient-to-r from-yt-primary to-blue-600 opacity-20 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
-            {#if downloading}
-              <span class="material-symbols-outlined text-white text-[20px] z-10 animate-spin">progress_activity</span>
-              <span class="text-sm font-semibold text-white z-10 font-display tracking-wide">Downloading...</span>
-            {:else}
-              <span class="material-symbols-outlined text-white text-[20px] z-10">download</span>
-              <span class="text-sm font-semibold text-white z-10 font-display tracking-wide">Start Download</span>
-            {/if}
-          </div>
-        </button>
-        <p class="text-center text-gray-400 text-sm mt-3">
-          Downloads are saved to <span class="text-gray-600 font-mono">{downloadPath}</span>
-        </p>
-      </div>
     </div>
 </div>

@@ -3,23 +3,27 @@ use super::progress;
 use super::settings;
 use super::types::*;
 use crate::modules::types::AppError;
+use std::collections::HashMap;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::sync::watch;
 
 pub struct DownloadManager {
     active_count: AtomicU32,
     max_concurrent: AtomicU32,
+    cancel_senders: Mutex<HashMap<u64, watch::Sender<bool>>>,
 }
 
 impl DownloadManager {
     pub fn new(max_concurrent: u32) -> Self {
         Self {
             active_count: AtomicU32::new(0),
-            max_concurrent: AtomicU32::new(max_concurrent),
+            max_concurrent: AtomicU32::new(max_concurrent.max(1)),
+            cancel_senders: Mutex::new(HashMap::new()),
         }
     }
 
@@ -31,22 +35,59 @@ impl DownloadManager {
         self.max_concurrent.load(Ordering::SeqCst)
     }
 
+    // 2-2: Prevent set_max_concurrent(0)
     pub fn set_max_concurrent(&self, val: u32) {
-        self.max_concurrent.store(val, Ordering::SeqCst);
+        self.max_concurrent.store(val.max(1), Ordering::SeqCst);
     }
 
+    // 1-1: CAS loop to fix TOCTOU race condition
     pub fn try_acquire(&self) -> bool {
-        let current = self.active_count.load(Ordering::SeqCst);
-        if current < self.max_concurrent.load(Ordering::SeqCst) {
-            self.active_count.fetch_add(1, Ordering::SeqCst);
-            true
-        } else {
-            false
+        loop {
+            let current = self.active_count.load(Ordering::SeqCst);
+            if current >= self.max_concurrent.load(Ordering::SeqCst) {
+                return false;
+            }
+            if self
+                .active_count
+                .compare_exchange(current, current + 1, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                return true;
+            }
         }
     }
 
     pub fn release(&self) {
         self.active_count.fetch_sub(1, Ordering::SeqCst);
+    }
+
+    // 1-2: Cancel support methods
+    fn register_cancel(&self, task_id: u64) -> watch::Receiver<bool> {
+        let (tx, rx) = watch::channel(false);
+        let mut senders = self
+            .cancel_senders
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        senders.insert(task_id, tx);
+        rx
+    }
+
+    pub fn send_cancel(&self, task_id: u64) {
+        let mut senders = self
+            .cancel_senders
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(tx) = senders.remove(&task_id) {
+            let _ = tx.send(true);
+        }
+    }
+
+    fn unregister_cancel(&self, task_id: u64) {
+        let mut senders = self
+            .cancel_senders
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        senders.remove(&task_id);
     }
 }
 
@@ -87,32 +128,27 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
 }
 
 async fn execute_download(app: AppHandle, task_id: u64) {
-    // Get database from state
     let db_state = app.state::<crate::DbState>();
+    let manager = app.state::<Arc<DownloadManager>>();
 
-    // Get task info from DB
     let task = match db_state.get_download(task_id) {
         Ok(Some(t)) => t,
         _ => {
-            let manager = app.state::<Arc<DownloadManager>>();
             manager.release();
             process_next_pending(app);
             return;
         }
     };
 
-    // Get app data directory
     let app_data_dir = match app.path().app_data_dir() {
         Ok(d) => d,
         Err(_) => {
-            let manager = app.state::<Arc<DownloadManager>>();
             manager.release();
             process_next_pending(app);
             return;
         }
     };
 
-    // Get binary paths
     let ytdlp_path = match binary::resolve_ytdlp_path(&app_data_dir).await {
         Ok(p) => p,
         Err(_) => {
@@ -134,7 +170,6 @@ async fn execute_download(app: AppHandle, task_id: u64) {
                     message: Some("yt-dlp not found".to_string()),
                 },
             );
-            let manager = app.state::<Arc<DownloadManager>>();
             manager.release();
             process_next_pending(app);
             return;
@@ -142,11 +177,9 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     };
     let ffmpeg_path = binary::get_ffmpeg_path(&app_data_dir);
 
-    // Get settings for cookie browser and other options
     let settings = match settings::get_settings(&app) {
         Ok(s) => s,
         Err(_) => {
-            let manager = app.state::<Arc<DownloadManager>>();
             manager.release();
             process_next_pending(app);
             return;
@@ -168,11 +201,13 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         },
     );
 
+    // 1-2: Register cancel receiver before spawning process
+    let mut cancel_rx = manager.register_cancel(task_id);
+
     // Build yt-dlp command
     let mut cmd = tokio::process::Command::new(&ytdlp_path);
 
     cmd.arg("--format").arg(&task.format_id);
-
     cmd.arg("--output").arg(&task.output_path);
 
     // Get ffmpeg directory (parent of ffmpeg binary)
@@ -219,7 +254,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
                     message: Some(error_msg),
                 },
             );
-            let manager = app.state::<Arc<DownloadManager>>();
+            manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
             return;
@@ -229,7 +264,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let stdout = match child.stdout.take() {
         Some(s) => s,
         None => {
-            let manager = app.state::<Arc<DownloadManager>>();
+            manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
             return;
@@ -239,7 +274,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let stderr = match child.stderr.take() {
         Some(s) => s,
         None => {
-            let manager = app.state::<Arc<DownloadManager>>();
+            manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
             return;
@@ -250,8 +285,8 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let db_state_clone = db_state.inner().clone();
     let app_clone = app.clone();
 
-    // Spawn task to read progress from stdout
-    tokio::spawn(async move {
+    // 1-3: Save JoinHandle for stdout reader task
+    let stdout_handle = tokio::spawn(async move {
         let reader = BufReader::new(stdout);
         let mut lines = reader.lines();
 
@@ -300,32 +335,67 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         output
     });
 
-    // Wait for process to complete
-    let status = match child.wait().await {
-        Ok(s) => s,
-        Err(e) => {
-            let error_msg = format!("Failed to wait for process: {}", e);
-            let _ =
-                db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_msg));
+    // 1-2: Wait for process with cancel support via tokio::select!
+    let status = tokio::select! {
+        result = child.wait() => {
+            match result {
+                Ok(s) => s,
+                Err(e) => {
+                    let error_msg = format!("Failed to wait for process: {}", e);
+                    let _ =
+                        db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_msg));
+                    let _ = app.emit(
+                        "download-event",
+                        GlobalDownloadEvent {
+                            task_id,
+                            event_type: "error".to_string(),
+                            percent: None,
+                            speed: None,
+                            eta: None,
+                            file_path: None,
+                            file_size: None,
+                            message: Some(error_msg),
+                        },
+                    );
+                    let _ = stdout_handle.await;
+                    let _ = stderr_handle.await;
+                    manager.unregister_cancel(task_id);
+                    manager.release();
+                    process_next_pending(app);
+                    return;
+                }
+            }
+        }
+        _ = cancel_rx.changed() => {
+            // Cancel signal received - kill the yt-dlp process
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            let _ = stdout_handle.await;
+            let _ = stderr_handle.await;
+            let _ = db_state.update_download_status(task_id, &DownloadStatus::Cancelled, None);
             let _ = app.emit(
                 "download-event",
                 GlobalDownloadEvent {
                     task_id,
-                    event_type: "error".to_string(),
+                    event_type: "cancelled".to_string(),
                     percent: None,
                     speed: None,
                     eta: None,
                     file_path: None,
                     file_size: None,
-                    message: Some(error_msg),
+                    message: Some("다운로드가 취소되었습니다.".to_string()),
                 },
             );
-            let manager = app.state::<Arc<DownloadManager>>();
+            manager.unregister_cancel(task_id);
             manager.release();
             process_next_pending(app);
             return;
         }
     };
+
+    // 1-3, 1-4: Await both stdout and stderr handles before checking result
+    let _ = stdout_handle.await;
+    let stderr_output = stderr_handle.await.unwrap_or_default();
 
     if status.success() {
         // Download completed successfully
@@ -370,8 +440,6 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         );
     } else {
         // Download failed
-        let stderr_output = stderr_handle.await.unwrap_or_default();
-
         let error_message = if let Some(code) = status.code() {
             match code {
                 1 => {
@@ -412,7 +480,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     }
 
     // Release the download slot and process next pending
-    let manager = app.state::<Arc<DownloadManager>>();
+    manager.unregister_cancel(task_id);
     manager.release();
     process_next_pending(app);
 }
@@ -425,8 +493,14 @@ fn process_next_pending(app: AppHandle) {
     while manager.try_acquire() {
         match db_state.get_next_pending() {
             Ok(Some(task)) => {
-                let _ =
-                    db_state.update_download_status(task.id, &DownloadStatus::Downloading, None);
+                // 1-6: Release slot if status update fails to prevent slot leak
+                if db_state
+                    .update_download_status(task.id, &DownloadStatus::Downloading, None)
+                    .is_err()
+                {
+                    manager.release();
+                    continue;
+                }
                 let app_clone = app.clone();
                 let task_id = task.id;
                 tokio::spawn(async move {
@@ -455,6 +529,7 @@ pub async fn start_download(
     add_to_queue(app, request).await
 }
 
+// 1-2: Proper cancel implementation that kills the actual yt-dlp process
 #[tauri::command]
 #[specta::specta]
 pub async fn cancel_download(app: AppHandle, task_id: u64) -> Result<(), AppError> {
@@ -463,8 +538,9 @@ pub async fn cancel_download(app: AppHandle, task_id: u64) -> Result<(), AppErro
     // Update status to Cancelled in DB
     db_state.update_download_status(task_id, &DownloadStatus::Cancelled, None)?;
 
-    // TODO: Implement process killing in future enhancement
-    // For now, just update the status
+    // Send cancel signal to kill the actual yt-dlp process
+    let manager = app.state::<Arc<DownloadManager>>();
+    manager.send_cancel(task_id);
 
     Ok(())
 }

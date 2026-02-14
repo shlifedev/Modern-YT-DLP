@@ -1,6 +1,7 @@
 use super::binary;
 use super::types::*;
 use crate::modules::types::AppError;
+use std::sync::Arc;
 use tauri::ipc::Channel;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -74,7 +75,7 @@ pub async fn retry_download(
         video_url: task.video_url,
         video_id: task.video_id,
         title: task.title,
-        format_id: String::new(), // Will use default
+        format_id: task.format_id, // 2-3: Use original format_id
         quality_label: task.quality_label,
         output_dir: None,
         cookie_browser: None,
@@ -93,19 +94,29 @@ pub fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
 #[tauri::command]
 #[specta::specta]
 pub fn update_settings(app: AppHandle, settings: AppSettings) -> Result<(), AppError> {
-    super::settings::update_settings(&app, &settings)
+    super::settings::update_settings(&app, &settings)?;
+
+    // 2-1: Sync max_concurrent to DownloadManager at runtime
+    let manager = app.state::<Arc<super::download::DownloadManager>>();
+    manager.set_max_concurrent(settings.max_concurrent);
+
+    Ok(())
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn select_download_directory(app: AppHandle) -> Result<Option<String>, AppError> {
-    let dir = app
-        .dialog()
-        .file()
-        .set_title("다운로드 폴더 선택")
-        .blocking_pick_folder();
+    // 2-4: Use spawn_blocking to avoid blocking the async runtime
+    let result = tokio::task::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("다운로드 폴더 선택")
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("Dialog task failed: {}", e)))?;
 
-    Ok(dir.map(|p| p.to_string()))
+    Ok(result.map(|p| p.to_string()))
 }
 
 #[tauri::command]

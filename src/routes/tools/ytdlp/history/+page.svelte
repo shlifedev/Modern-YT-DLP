@@ -1,6 +1,6 @@
 <script lang="ts">
   import { commands } from "$lib/bindings"
-  import { onMount } from "svelte"
+  import { onMount, onDestroy } from "svelte"
 
   let items = $state<any[]>([])
   let totalCount = $state(0)
@@ -9,6 +9,9 @@
   let search = $state("")
   let loading = $state(true)
   let searchTimeout: ReturnType<typeof setTimeout>
+
+  // 5-2: Clean up searchTimeout on unmount
+  onDestroy(() => { clearTimeout(searchTimeout) })
 
   let totalPages = $derived(Math.ceil(totalCount / pageSize))
 
@@ -32,10 +35,15 @@
     searchTimeout = setTimeout(() => { currentPage = 0; loadHistory() }, 300)
   }
 
+  // 4-2: Add try/catch to prevent unhandled errors
   async function handleDelete(id: number) {
     if (!confirm("이 항목을 삭제하시겠습니까?")) return
-    const result = await commands.deleteHistoryItem(id)
-    if (result.status === "ok") await loadHistory()
+    try {
+      const result = await commands.deleteHistoryItem(id)
+      if (result.status === "ok") await loadHistory()
+    } catch (e) {
+      console.error("Failed to delete history item:", e)
+    }
   }
 
   function prevPage() { if (currentPage > 0) { currentPage--; loadHistory() } }
@@ -44,8 +52,10 @@
   function formatDate(ts: number): string {
     return new Date(ts * 1000).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
   }
+  // 5-3: Fix formatSize(0) returning "-"
   function formatSize(bytes: number | null): string {
-    if (!bytes) return "-"
+    if (bytes === null || bytes === undefined) return "-"
+    if (bytes === 0) return "0 MB"
     const mb = bytes / (1024 ** 2)
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
     if (mb >= 1) return `${mb.toFixed(1)} MB`
