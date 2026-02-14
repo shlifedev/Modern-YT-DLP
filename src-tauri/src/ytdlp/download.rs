@@ -58,7 +58,13 @@ impl DownloadManager {
     }
 
     pub fn release(&self) {
-        self.active_count.fetch_sub(1, Ordering::SeqCst);
+        // Guard against accidental double-release under race/error paths.
+        // Underflow would wrap to u32::MAX and effectively deadlock queue scheduling.
+        let _ = self
+            .active_count
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+                Some(current.saturating_sub(1))
+            });
     }
 
     // 1-2: Cancel support methods

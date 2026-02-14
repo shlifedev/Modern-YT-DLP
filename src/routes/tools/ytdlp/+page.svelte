@@ -116,11 +116,18 @@
             downloadStatus = "completed"
             downloading = false
             progress = 100
+            taskId = null
             break
           case "error":
             downloadStatus = "failed"
             downloading = false
             error = data.message || "다운로드 실패"
+            taskId = null
+            break
+          case "cancelled":
+            downloadStatus = "cancelled"
+            downloading = false
+            taskId = null
             break
         }
       }
@@ -369,13 +376,13 @@
         downloading = false
         error = extractError(result.error)
       } else {
+        taskId = result.data
         window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: 1 } }))
         downloading = false
-        downloadStatus = "idle"
+        downloadStatus = "queued"
         url = ""
         videoInfo = null
         playlistResult = null
-        taskId = null
       }
     } catch (e: any) {
       downloadStatus = "failed"
