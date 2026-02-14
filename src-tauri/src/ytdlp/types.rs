@@ -233,6 +233,16 @@ pub struct HistoryResult {
     pub page_size: u32,
 }
 
+// === Duplicate Check ===
+
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DuplicateCheckResult {
+    pub in_history: bool,
+    pub in_queue: bool,
+    pub history_item: Option<HistoryItem>,
+}
+
 // === Settings ===
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]

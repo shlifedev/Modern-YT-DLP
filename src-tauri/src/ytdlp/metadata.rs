@@ -86,12 +86,16 @@ pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, 
         .map_err(|e| AppError::Custom(format!("Failed to get app data dir: {}", e)))?;
 
     let ytdlp_path = binary::resolve_ytdlp_path(&app_data_dir).await?;
+    let settings = super::settings::get_settings(&app).unwrap_or_default();
 
     // Run yt-dlp with --dump-json
-    let output = tokio::process::Command::new(&ytdlp_path)
-        .arg("--dump-json")
-        .arg("--no-playlist")
-        .arg(&url)
+    let mut cmd = tokio::process::Command::new(&ytdlp_path);
+    cmd.arg("--dump-json").arg("--no-playlist");
+    if let Some(browser) = &settings.cookie_browser {
+        cmd.arg("--cookies-from-browser").arg(browser);
+    }
+    cmd.arg(&url);
+    let output = cmd
         .output()
         .await
         .map_err(|e| AppError::MetadataError(format!("Failed to execute yt-dlp: {}", e)))?;
@@ -234,12 +238,16 @@ pub async fn fetch_playlist_info(
         .map_err(|e| AppError::Custom(format!("Failed to get app data dir: {}", e)))?;
 
     let ytdlp_path = binary::resolve_ytdlp_path(&app_data_dir).await?;
+    let settings = super::settings::get_settings(&app).unwrap_or_default();
 
     // Run yt-dlp with --flat-playlist --dump-json
-    let output = tokio::process::Command::new(&ytdlp_path)
-        .arg("--flat-playlist")
-        .arg("--dump-json")
-        .arg(&url)
+    let mut cmd = tokio::process::Command::new(&ytdlp_path);
+    cmd.arg("--flat-playlist").arg("--dump-json");
+    if let Some(browser) = &settings.cookie_browser {
+        cmd.arg("--cookies-from-browser").arg(browser);
+    }
+    cmd.arg(&url);
+    let output = cmd
         .output()
         .await
         .map_err(|e| AppError::MetadataError(format!("Failed to execute yt-dlp: {}", e)))?;

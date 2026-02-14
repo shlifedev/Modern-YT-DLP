@@ -306,6 +306,18 @@ impl Database {
         })
     }
 
+    pub fn check_duplicate_in_queue(&self, video_id: &str) -> Result<bool, AppError> {
+        let conn = self.conn();
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM downloads WHERE video_id = ?1 AND status IN ('pending', 'downloading')",
+                [video_id],
+                |row| row.get(0),
+            )
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        Ok(count > 0)
+    }
+
     pub fn check_duplicate(&self, video_id: &str) -> Result<Option<HistoryItem>, AppError> {
         let conn = self.conn();
         let mut stmt = conn.prepare(

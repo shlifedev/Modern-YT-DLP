@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { commands, type PlaylistResult } from "$lib/bindings"
+  import { commands, type PlaylistResult, type DuplicateCheckResult } from "$lib/bindings"
   import { listen } from "@tauri-apps/api/event"
   import { onMount, onDestroy } from "svelte"
 
@@ -44,6 +44,10 @@
   // Batch download state
   let downloadingAll = $state(false)
   let batchProgress = $state({ current: 0, total: 0 })
+
+  // Duplicate check state
+  let duplicateCheck = $state<DuplicateCheckResult | null>(null)
+  let pendingRequest = $state<any>(null)
 
   // Auto-analyze (NOT $state to avoid being tracked by $effect)
   let analyzeTimeoutId: ReturnType<typeof setTimeout> | null = null
@@ -266,24 +270,54 @@
 
   async function handleStartDownload() {
     if (!videoInfo && !url.trim()) return
+    error = null
+    duplicateCheck = null
+    pendingRequest = null
+
+    const request = {
+      videoUrl: videoInfo?.url || url,
+      videoId: videoInfo?.videoId || "",
+      title: videoInfo?.title || url,
+      formatId: buildFormatString(),
+      qualityLabel: quality === "best" ? "Best" : quality,
+      outputDir: null,
+      cookieBrowser: null,
+    }
+
+    // Check for duplicates if we have a video ID
+    if (request.videoId) {
+      try {
+        const dupResult = await commands.checkDuplicate(request.videoId)
+        if (dupResult.status === "ok" && dupResult.data) {
+          if (dupResult.data.inQueue) {
+            error = "이미 다운로드 큐에 있는 영상입니다."
+            return
+          }
+          if (dupResult.data.inHistory) {
+            duplicateCheck = dupResult.data
+            pendingRequest = request
+            return
+          }
+        }
+      } catch (e) {
+        // Duplicate check failed, proceed with download anyway
+      }
+    }
+
+    await executeDownload(request)
+  }
+
+  async function executeDownload(request: any) {
     downloading = true
     downloadStatus = "downloading"
     progress = 0
     speed = ""
     eta = ""
     error = null
+    duplicateCheck = null
+    pendingRequest = null
 
     try {
-      const request = {
-        videoUrl: videoInfo?.url || url,
-        videoId: videoInfo?.videoId || "",
-        title: videoInfo?.title || url,
-        formatId: buildFormatString(),
-        qualityLabel: quality === "best" ? "Best" : quality,
-        outputDir: null,
-        cookieBrowser: null,
-      }
-
       const result = await commands.addToQueue(request)
       if (result.status === "error") {
         downloadStatus = "failed"
@@ -303,6 +337,15 @@
       downloading = false
       error = e.message || String(e)
     }
+  }
+
+  function confirmDuplicate() {
+    if (pendingRequest) executeDownload(pendingRequest)
+  }
+
+  function cancelDuplicate() {
+    duplicateCheck = null
+    pendingRequest = null
   }
 
   async function handleCancelDownload() {
@@ -345,9 +388,20 @@
       batchProgress = { current: 0, total: totalCount }
       const formatStr = buildFormatString()
       const qualityLabel = quality === "best" ? "Best" : quality
+      let skippedQueue = 0
 
       for (const entry of entries) {
         if (!downloadingAll) break
+
+        // Skip if already in queue
+        try {
+          const dupResult = await commands.checkDuplicate(entry.videoId)
+          if (dupResult.status === "ok" && dupResult.data?.inQueue) {
+            skippedQueue++
+            batchProgress = { current: batchProgress.current + 1, total: totalCount }
+            continue
+          }
+        } catch (e) { /* proceed on error */ }
 
         const request = {
           videoUrl: entry.url,
@@ -367,7 +421,10 @@
         batchProgress = { current: batchProgress.current + 1, total: totalCount }
       }
 
-      window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount } }))
+      if (skippedQueue > 0) {
+        error = `${skippedQueue}개 영상이 이미 큐에 있어 건너뛰었습니다.`
+      }
+      window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount - skippedQueue } }))
       url = ""
       videoInfo = null
       playlistResult = null
@@ -401,9 +458,20 @@
       batchProgress = { current: 0, total: totalCount }
       const formatStr = buildFormatString()
       const qualityLabel = quality === "best" ? "Best" : quality
+      let skippedQueue = 0
 
       for (const entry of allEntries) {
         if (!downloadingAll) break // cancelled by user
+
+        // Skip if already in queue
+        try {
+          const dupResult = await commands.checkDuplicate(entry.videoId)
+          if (dupResult.status === "ok" && dupResult.data?.inQueue) {
+            skippedQueue++
+            batchProgress = { current: batchProgress.current + 1, total: totalCount }
+            continue
+          }
+        } catch (e) { /* proceed on error */ }
 
         const request = {
           videoUrl: entry.url,
@@ -423,7 +491,10 @@
         batchProgress = { current: batchProgress.current + 1, total: totalCount }
       }
 
-      window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount } }))
+      if (skippedQueue > 0) {
+        error = `${skippedQueue}개 영상이 이미 큐에 있어 건너뛰었습니다.`
+      }
+      window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount - skippedQueue } }))
       url = ""
       videoInfo = null
       playlistResult = null
@@ -464,6 +535,28 @@
           <button class="text-red-600 hover:text-red-500" onclick={() => error = null}>
             <span class="material-symbols-outlined text-[18px]">close</span>
           </button>
+        </div>
+      {/if}
+
+      <!-- Duplicate Warning -->
+      {#if duplicateCheck}
+        <div class="bg-amber-500/10 rounded-lg px-4 py-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="material-symbols-outlined text-amber-600 text-[20px] shrink-0">warning</span>
+            <span class="text-amber-700 text-xs truncate">
+              "{videoInfo?.title || pendingRequest?.title}"은(는) 이미 다운로드한 적이 있습니다.
+            </span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              class="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors"
+              onclick={confirmDuplicate}
+            >다시 다운로드</button>
+            <button
+              class="px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium transition-colors"
+              onclick={cancelDuplicate}
+            >취소</button>
+          </div>
         </div>
       {/if}
 

@@ -219,6 +219,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         .arg(progress::progress_template());
     cmd.arg("--newline");
     cmd.arg("--no-playlist");
+    cmd.arg("--no-overwrites");
 
     // Add cookie browser from settings if available
     if let Some(browser) = &settings.cookie_browser {

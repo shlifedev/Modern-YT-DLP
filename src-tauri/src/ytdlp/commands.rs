@@ -196,9 +196,15 @@ pub async fn get_download_history(
 pub async fn check_duplicate(
     app: AppHandle,
     video_id: String,
-) -> Result<Option<HistoryItem>, AppError> {
+) -> Result<DuplicateCheckResult, AppError> {
     let db = app.state::<crate::DbState>();
-    db.check_duplicate(&video_id)
+    let history_item = db.check_duplicate(&video_id)?;
+    let in_queue = db.check_duplicate_in_queue(&video_id)?;
+    Ok(DuplicateCheckResult {
+        in_history: history_item.is_some(),
+        in_queue,
+        history_item,
+    })
 }
 
 #[tauri::command]

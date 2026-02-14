@@ -91,7 +91,7 @@ async getDownloadHistory(page: number, pageSize: number, search: string | null) 
     else return { status: "error", error: e  as any };
 }
 },
-async checkDuplicate(videoId: string) : Promise<Result<HistoryItem | null, AppError>> {
+async checkDuplicate(videoId: string) : Promise<Result<DuplicateCheckResult, AppError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("check_duplicate", { videoId }) };
 } catch (e) {
@@ -220,6 +220,7 @@ export type DownloadEvent = { event: "started"; data: { task_id: number } } | { 
 export type DownloadRequest = { videoUrl: string; videoId: string; title: string; formatId: string; qualityLabel: string; outputDir: string | null; cookieBrowser: string | null }
 export type DownloadStatus = "pending" | "downloading" | "paused" | "completed" | "failed" | "cancelled"
 export type DownloadTaskInfo = { id: number; videoUrl: string; videoId: string; title: string; formatId: string; qualityLabel: string; outputPath: string; status: DownloadStatus; progress: number; speed: string | null; eta: string | null; errorMessage: string | null; createdAt: number; completedAt: number | null }
+export type DuplicateCheckResult = { inHistory: boolean; inQueue: boolean; historyItem: HistoryItem | null }
 export type FormatInfo = { formatId: string; ext: string; resolution: string | null; qualityLabel: string | null; filesize: number | null; vcodec: string | null; acodec: string | null; hasVideo: boolean; hasAudio: boolean }
 export type GlobalDownloadEvent = { taskId: number; eventType: string; percent: number | null; speed: string | null; eta: string | null; filePath: string | null; fileSize: number | null; message: string | null }
 export type HistoryItem = { id: number; videoUrl: string; videoId: string; title: string; qualityLabel: string; format: string; filePath: string; fileSize: number | null; downloadedAt: number }
