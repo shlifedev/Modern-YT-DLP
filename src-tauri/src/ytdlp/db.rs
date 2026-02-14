@@ -440,11 +440,12 @@ impl Database {
     /// in a single SQL statement. Returns the claimed task or None if no pending tasks exist.
     /// This prevents the race condition where two concurrent callers could claim the same task.
     pub fn claim_next_pending(&self) -> Result<Option<DownloadTaskInfo>, AppError> {
-        let conn = self.conn();
-
-        // Atomically update the oldest pending task to 'downloading' and return its id
-        let claimed_id: Option<u64> = conn
-            .query_row(
+        // Scope the MutexGuard so it is dropped before calling get_download(),
+        // which also acquires the same Mutex. std::sync::Mutex is non-reentrant,
+        // so holding the guard while calling get_download() would deadlock.
+        let claimed_id: Option<u64> = {
+            let conn = self.conn();
+            conn.query_row(
                 "UPDATE downloads SET status = 'downloading'
                  WHERE id = (SELECT id FROM downloads WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1)
                  RETURNING id",
@@ -452,7 +453,8 @@ impl Database {
                 |row| row.get(0),
             )
             .optional()
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?
+        }; // MutexGuard dropped here
 
         match claimed_id {
             Some(id) => self.get_download(id),
@@ -485,6 +487,19 @@ impl Database {
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
         Ok(ids)
+    }
+
+    /// Reset downloads that were left in 'downloading' state from a previous session.
+    /// Called on app startup to clean up stale state after unexpected shutdown.
+    pub fn reset_stale_downloads(&self) -> Result<u32, AppError> {
+        let conn = self.conn();
+        let rows = conn
+            .execute(
+                "UPDATE downloads SET status = 'failed', error_message = 'App closed during download' WHERE status = 'downloading'",
+                [],
+            )
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        Ok(rows as u32)
     }
 
     pub fn get_active_downloads(&self) -> Result<Vec<DownloadTaskInfo>, AppError> {

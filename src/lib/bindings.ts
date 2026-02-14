@@ -195,6 +195,9 @@ async setMinimizeToTray(minimize: boolean, remember: boolean) : Promise<Result<n
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getRecentLogs() : Promise<string> {
+    return await TAURI_INVOKE("get_recent_logs");
 }
 }
 

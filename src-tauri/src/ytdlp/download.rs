@@ -92,6 +92,13 @@ impl DownloadManager {
             });
     }
 
+    /// Synchronize active_count with the actual DB state.
+    /// Used after cancel_all to correct any drift between the atomic counter
+    /// and the real number of downloading tasks.
+    pub fn sync_active_count(&self, count: u32) {
+        self.active_count.store(count, Ordering::SeqCst);
+    }
+
     // 1-2: Cancel support methods
     fn register_cancel(&self, task_id: u64) -> watch::Receiver<bool> {
         let (tx, rx) = watch::channel(false);
@@ -160,24 +167,44 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
     // Try to acquire a download slot
     let manager = app.state::<Arc<DownloadManager>>();
     if manager.try_acquire() {
-        // Immediately start download
-        db_state.update_download_status(task_id, &DownloadStatus::Downloading, None)?;
-        let app_clone = app.clone();
-        let app_panic_guard = app.clone();
-        tokio::spawn(async move {
-            let result = tokio::spawn(async move {
-                execute_download(app_clone, task_id).await;
-            })
-            .await;
-            if let Err(e) = result {
-                logger::error(&format!("[download:{}] task panicked: {:?}", task_id, e));
-                let manager = app_panic_guard.state::<Arc<DownloadManager>>();
-                manager.release();
-                process_next_pending(app_panic_guard);
+        // Immediately start download - ensure release() on DB update failure
+        match db_state.update_download_status(task_id, &DownloadStatus::Downloading, None) {
+            Ok(()) => {
+                let app_clone = app.clone();
+                let app_panic_guard = app.clone();
+                tokio::spawn(async move {
+                    let result = tokio::spawn(async move {
+                        execute_download(app_clone, task_id).await;
+                    })
+                    .await;
+                    if let Err(e) = result {
+                        logger::error(&format!(
+                            "[download:{}] task panicked: {:?}",
+                            task_id, e
+                        ));
+                        let manager = app_panic_guard.state::<Arc<DownloadManager>>();
+                        manager.release();
+                        process_next_pending(app_panic_guard);
+                    }
+                });
             }
+            Err(e) => {
+                logger::error(&format!(
+                    "[download:{}] failed to update status to downloading: {}",
+                    task_id, e
+                ));
+                manager.release();
+            }
+        }
+    } else {
+        // No slot available - schedule a check for pending items
+        // This handles the case where all concurrent downloads finish before
+        // batch add_to_queue calls complete, leaving pending items with no trigger.
+        let app_clone = app.clone();
+        tokio::spawn(async move {
+            process_next_pending(app_clone);
         });
     }
-    // Otherwise, task stays in pending status until a slot becomes available
 
     Ok(task_id)
 }
@@ -555,7 +582,14 @@ async fn execute_download(app: AppHandle, task_id: u64) {
             downloaded_at: completed_at,
         };
 
-        let _ = db_state.complete_and_record(task_id, completed_at, &history_item);
+        if let Err(e) = db_state.complete_and_record(task_id, completed_at, &history_item) {
+            logger::error(&format!(
+                "[download:{}] failed to complete_and_record: {}",
+                task_id, e
+            ));
+            // Fallback: at least mark the download as completed
+            let _ = db_state.mark_completed(task_id, completed_at);
+        }
 
         logger::info(&format!(
             "[download:{}] completed successfully, file_size={}",
@@ -728,6 +762,12 @@ pub async fn cancel_all_downloads(app: AppHandle) -> Result<u32, AppError> {
             cancelled += 1;
         }
     }
+
+    // Sync active_count with actual DB state to correct any drift.
+    // Cancel signals are processed asynchronously, so the DB may still show
+    // some tasks as 'downloading' briefly. We sync to the current DB truth.
+    let actual_active = db_state.get_active_count().unwrap_or(0);
+    manager.sync_active_count(actual_active);
 
     Ok(cancelled)
 }

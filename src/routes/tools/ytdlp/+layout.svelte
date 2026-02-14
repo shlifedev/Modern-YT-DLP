@@ -27,6 +27,7 @@
   let popupOpen = $state(false)
   let activeDownloads = $state<any[]>([])
   let recentCompleted = $state<any[]>([])
+  let progressCache = new Map<number, { progress: number, speed: string | null, eta: string | null }>()
   let activeCount = $derived(activeDownloads.filter(d => d.status === "downloading").length)
   let pendingCount = $derived(activeDownloads.filter(d => d.status === "pending").length)
 
@@ -57,14 +58,33 @@
   // Popup auto-refresh
   let popupInterval: ReturnType<typeof setInterval> | null = null
   let unlisten: (() => void) | null = null
+  let loadDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
   async function loadActiveDownloads() {
     try {
       const result = await commands.getActiveDownloads()
       if (result.status === "ok") {
-        activeDownloads = result.data
+        activeDownloads = result.data.map((item: any) => {
+          const cached = progressCache.get(item.id)
+          if (cached && item.status === "downloading") {
+            return { ...item, ...cached }
+          }
+          return item
+        })
+        // 더 이상 활성이 아닌 다운로드의 캐시 정리
+        const activeIds = new Set(result.data.map((d: any) => d.id))
+        for (const id of progressCache.keys()) {
+          if (!activeIds.has(id)) progressCache.delete(id)
+        }
       }
     } catch (e) { console.error("Failed to load active downloads:", e) }
+  }
+
+  function debouncedLoadActiveDownloads() {
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer)
+    loadDebounceTimer = setTimeout(() => {
+      loadActiveDownloads()
+    }, 150)
   }
 
   async function handleCancelAll() {
@@ -127,7 +147,7 @@
     requestAnimationFrame(() => { queueBounce = true })
     setTimeout(() => { queueBounce = false }, 800)
 
-    loadActiveDownloads()
+    debouncedLoadActiveDownloads()
   }
 
   onMount(async () => {
@@ -159,12 +179,26 @@
     try {
       const unlistenFn = await listen("download-event", (event: any) => {
         const data = event.payload
-        if (data.eventType === "completed") {
-          // Look up title before refreshing activeDownloads (which may remove the completed item)
-          const title = activeDownloads.find(d => d.id === data.taskId)?.title
-          showToast(t("layout.downloadComplete", { title: title || "video" }), "download_done")
+
+        if (data.eventType === "progress") {
+          const cached = {
+            progress: data.percent ?? 0,
+            speed: data.speed ?? null,
+            eta: data.eta ?? null,
+          }
+          progressCache.set(data.taskId, cached)
+          const idx = activeDownloads.findIndex(d => d.id === data.taskId)
+          if (idx !== -1) {
+            activeDownloads[idx] = { ...activeDownloads[idx], ...cached }
+          }
+        } else {
+          // 상태 변경 이벤트(started, completed, error, cancelled)만 DB 재조회
+          if (data.eventType === "completed") {
+            const title = activeDownloads.find(d => d.id === data.taskId)?.title
+            showToast(t("layout.downloadComplete", { title: title || "video" }), "download_done")
+          }
+          debouncedLoadActiveDownloads()
         }
-        loadActiveDownloads()
       })
       unlisten = unlistenFn
     } catch (e) { console.error("Failed to listen for download events:", e) }
@@ -188,6 +222,7 @@
     if (unlistenClose) unlistenClose()
     window.removeEventListener("queue-added", handleQueueAdded)
     if (toastTimeout) clearTimeout(toastTimeout)
+    if (loadDebounceTimer) clearTimeout(loadDebounceTimer)
   })
 
   function handleDebugKey(e: KeyboardEvent) {
@@ -463,7 +498,7 @@
           </div>
         {:else}
           <div class="p-3 space-y-2">
-            {#each activeDownloads as item}
+            {#each activeDownloads as item (item.id)}
               <div class="bg-yt-highlight rounded-lg p-3 border border-white/[0.06] {item.status === 'downloading' ? '!border-yt-primary/30' : ''}">
                 <p class="text-sm text-gray-100 truncate font-medium">{item.title}</p>
                 <div class="flex items-center justify-between mt-1.5">

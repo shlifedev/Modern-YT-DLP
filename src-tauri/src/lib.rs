@@ -78,6 +78,15 @@ pub fn run() {
 
             let db =
                 ytdlp::db::Database::new(&app_data_dir).expect("Failed to initialize database");
+            // Reset stale downloads left in 'downloading' state from previous session
+            if let Ok(count) = db.reset_stale_downloads() {
+                if count > 0 {
+                    modules::logger::info(&format!(
+                        "Reset {} stale downloads from previous session",
+                        count
+                    ));
+                }
+            }
             app.manage(Arc::new(db));
 
             // Initialize DownloadManager with max_concurrent from settings
@@ -90,6 +99,16 @@ pub fn run() {
 
             // Setup system tray
             ytdlp::tray::setup_tray(&app.handle().clone()).expect("Failed to setup system tray");
+
+            // Process any pending downloads left from a previous session.
+            // These are items that were 'pending' (not 'downloading') when the app closed,
+            // so reset_stale_downloads() does not touch them.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                // Small delay to let the app fully initialize before processing
+                tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+                ytdlp::download::process_next_pending_public(handle);
+            });
 
             Ok(())
         })
