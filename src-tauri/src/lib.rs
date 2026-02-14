@@ -90,6 +90,12 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(invoke_handler)
-        .run(tauri::generate_context!())
-        .expect("error running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                let manager = app_handle.state::<DownloadManagerState>();
+                manager.cancel_all();
+            }
+        });
 }

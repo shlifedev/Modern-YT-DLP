@@ -89,6 +89,17 @@ impl DownloadManager {
             .unwrap_or_else(|e| e.into_inner());
         senders.remove(&task_id);
     }
+
+    /// 앱 종료 시 모든 활성 다운로드 취소. 동기적으로 cancel signal만 전송.
+    pub fn cancel_all(&self) {
+        let mut senders = self
+            .cancel_senders
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        for (_task_id, tx) in senders.drain() {
+            let _ = tx.send(true);
+        }
+    }
 }
 
 #[tauri::command]
