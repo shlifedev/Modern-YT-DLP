@@ -5,6 +5,7 @@
 
   let queue = $state<any[]>([])
   let firstLoad = $state(true)
+  let expandedErrors = $state<Set<number>>(new Set())
 
   // 5-4: Consolidated single onMount with interval after initial load
   let interval: ReturnType<typeof setInterval>
@@ -57,6 +58,13 @@
     } catch (e) {
       console.error("Failed to cancel all downloads:", e)
     }
+  }
+
+  function toggleError(id: number) {
+    const next = new Set(expandedErrors)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    expandedErrors = next
   }
 
   // 5-3: Fix formatSize(0) returning empty string
@@ -126,62 +134,80 @@
       </div>
     {:else}
       {#each queue as item (item.id)}
-        <div class="bg-yt-highlight rounded-xl p-4 flex gap-4 items-center hover:bg-white/[0.06] transition-colors border border-white/[0.06]
-          {item.status === 'downloading' ? '!border-yt-primary/30 relative overflow-hidden' : ''}">
+        <div class="bg-yt-highlight rounded-xl p-4 hover:bg-white/[0.06] transition-colors border border-white/[0.06]
+          {item.status === 'downloading' ? '!border-yt-primary/30 relative overflow-hidden' : ''}
+          {item.status === 'failed' ? '!border-red-500/20' : ''}">
           {#if item.status === "downloading"}
             <div class="absolute bottom-0 left-0 h-1 bg-yt-primary" style="width: {item.progress || 0}%"></div>
           {/if}
 
-          <div class="w-20 h-14 bg-white/[0.04] rounded-lg overflow-hidden shrink-0 relative">
-            <div class="w-full h-full bg-gradient-to-br from-white/[0.03] to-white/[0.08] flex items-center justify-center">
-              {#if item.status === "downloading"}
-                <span class="material-symbols-outlined text-yt-primary animate-spin">progress_activity</span>
-              {:else if item.status === "completed"}
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-              {:else if item.status === "failed"}
-                <span class="material-symbols-outlined text-red-600">error</span>
-              {:else}
-                <span class="material-symbols-outlined text-gray-500">download</span>
-              {/if}
-            </div>
-          </div>
-
-          <div class="flex-1 min-w-0">
-            <h4 class="font-medium text-gray-100 text-sm truncate mb-1">{item.title}</h4>
-            <div class="flex items-center gap-3 text-xs text-gray-400">
-              <span class="px-2 py-0.5 rounded bg-white/[0.06] text-gray-400">{item.qualityLabel || "N/A"}</span>
-              {#if item.status === "downloading" && item.speed}
-                <span class="text-yt-primary font-mono">{item.speed}</span>
-                <span>ETA: {item.eta || "..."}</span>
-              {/if}
-            </div>
-            {#if item.status === "downloading"}
-              <div class="w-full bg-white/[0.06] rounded-full h-1.5 mt-2">
-                <div class="bg-yt-primary h-1.5 rounded-full transition-all" style="width: {item.progress || 0}%"></div>
+          <div class="flex gap-4 items-center">
+            <div class="w-20 h-14 bg-white/[0.04] rounded-lg overflow-hidden shrink-0 relative">
+              <div class="w-full h-full bg-gradient-to-br from-white/[0.03] to-white/[0.08] flex items-center justify-center">
+                {#if item.status === "downloading"}
+                  <span class="material-symbols-outlined text-yt-primary animate-spin">progress_activity</span>
+                {:else if item.status === "completed"}
+                  <span class="material-symbols-outlined text-green-600">check_circle</span>
+                {:else if item.status === "failed"}
+                  <span class="material-symbols-outlined text-red-600">error</span>
+                {:else}
+                  <span class="material-symbols-outlined text-gray-500">download</span>
+                {/if}
               </div>
-            {/if}
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <h4 class="font-medium text-gray-100 text-sm truncate mb-1">{item.title}</h4>
+              <div class="flex items-center gap-3 text-xs text-gray-400">
+                <span class="px-2 py-0.5 rounded bg-white/[0.06] text-gray-400">{item.qualityLabel || "N/A"}</span>
+                {#if item.status === "downloading" && item.speed}
+                  <span class="text-yt-primary font-mono">{item.speed}</span>
+                  <span>ETA: {item.eta || "..."}</span>
+                {/if}
+              </div>
+              {#if item.status === "downloading"}
+                <div class="w-full bg-white/[0.06] rounded-full h-1.5 mt-2">
+                  <div class="bg-yt-primary h-1.5 rounded-full transition-all" style="width: {item.progress || 0}%"></div>
+                </div>
+              {/if}
+              {#if item.status === "failed" && item.errorMessage}
+                <button
+                  class="mt-1.5 text-xs text-red-400/80 hover:text-red-300 truncate max-w-full text-left flex items-center gap-1 transition-colors"
+                  onclick={() => toggleError(item.id)}
+                >
+                  <span class="material-symbols-outlined text-[14px] shrink-0">{expandedErrors.has(item.id) ? "expand_less" : "expand_more"}</span>
+                  <span class="truncate">{item.errorMessage.split("\n")[0]}</span>
+                </button>
+              {/if}
+            </div>
+
+            <div class="text-right shrink-0 flex items-center gap-3">
+              {#if item.status === "completed"}
+                <span class="flex items-center gap-1.5 text-green-600 text-xs font-medium">
+                  <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                  {t("queue.completedStatus")}
+                </span>
+              {:else if item.status === "downloading"}
+                <span class="text-gray-100 text-sm font-bold font-mono">{(item.progress || 0).toFixed(0)}%</span>
+                <button class="text-gray-500 hover:text-red-400 transition-colors" onclick={() => handleCancel(item.id)}>
+                  <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              {:else if item.status === "failed"}
+                <span class="flex items-center gap-1.5 text-red-600 text-xs font-medium">
+                  <span class="material-symbols-outlined text-[16px]">error</span>
+                  {t("queue.failedStatus")}
+                </span>
+              {:else}
+                <span class="text-gray-500 text-xs">{t("queue.pending")}</span>
+              {/if}
+            </div>
           </div>
 
-          <div class="text-right shrink-0 flex items-center gap-3">
-            {#if item.status === "completed"}
-              <span class="flex items-center gap-1.5 text-green-600 text-xs font-medium">
-                <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                {t("queue.completedStatus")}
-              </span>
-            {:else if item.status === "downloading"}
-              <span class="text-gray-100 text-sm font-bold font-mono">{(item.progress || 0).toFixed(0)}%</span>
-              <button class="text-gray-500 hover:text-red-400 transition-colors" onclick={() => handleCancel(item.id)}>
-                <span class="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            {:else if item.status === "failed"}
-              <span class="flex items-center gap-1.5 text-red-600 text-xs font-medium">
-                <span class="material-symbols-outlined text-[16px]">error</span>
-                {t("queue.failedStatus")}
-              </span>
-            {:else}
-              <span class="text-gray-500 text-xs">{t("queue.pending")}</span>
-            {/if}
-          </div>
+          {#if item.status === "failed" && item.errorMessage && expandedErrors.has(item.id)}
+            <div class="mt-3 pt-3 border-t border-red-500/10">
+              <pre class="text-xs text-red-300/80 bg-red-500/[0.06] rounded-lg p-3 whitespace-pre-wrap break-all font-mono max-h-40 overflow-y-auto">{item.errorMessage}</pre>
+            </div>
+          {/if}
         </div>
       {/each}
     {/if}

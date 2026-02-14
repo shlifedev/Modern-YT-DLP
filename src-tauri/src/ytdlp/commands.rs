@@ -1,5 +1,6 @@
 use super::binary;
 use super::types::*;
+use crate::modules::logger;
 use crate::modules::types::AppError;
 use std::sync::Arc;
 use tauri::ipc::Channel;
@@ -222,4 +223,10 @@ pub fn set_minimize_to_tray(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_recent_logs() -> String {
+    logger::read_recent_logs(200)
 }

@@ -2,6 +2,7 @@ use super::binary;
 use super::progress;
 use super::settings;
 use super::types::*;
+use crate::modules::logger;
 use crate::modules::types::AppError;
 use std::collections::HashMap;
 use std::process::Stdio;
@@ -169,7 +170,7 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
             })
             .await;
             if let Err(e) = result {
-                eprintln!("Download task panicked: {:?}", e);
+                logger::error(&format!("[download:{}] task panicked: {:?}", task_id, e));
                 let manager = app_panic_guard.state::<Arc<DownloadManager>>();
                 manager.release();
                 process_next_pending(app_panic_guard);
@@ -188,6 +189,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let task = match db_state.get_download(task_id) {
         Ok(Some(t)) => t,
         _ => {
+            logger::error(&format!("[download:{}] task not found in DB", task_id));
             manager.release();
             process_next_pending(app);
             return;
@@ -196,11 +198,13 @@ async fn execute_download(app: AppHandle, task_id: u64) {
 
     let ytdlp_path = match binary::resolve_ytdlp_path().await {
         Ok(p) => p,
-        Err(_) => {
+        Err(e) => {
+            let error_msg = "yt-dlp not found. Please install via Homebrew or click Install.";
+            logger::error(&format!("[download:{}] yt-dlp not found: {}", task_id, e));
             let _ = db_state.update_download_status(
                 task_id,
                 &DownloadStatus::Failed,
-                Some("yt-dlp not found. Please install via Homebrew or click Install."),
+                Some(error_msg),
             );
             let _ = app.emit(
                 "download-event",
@@ -223,7 +227,11 @@ async fn execute_download(app: AppHandle, task_id: u64) {
 
     let settings = match settings::get_settings(&app) {
         Ok(s) => s,
-        Err(_) => {
+        Err(e) => {
+            logger::error(&format!(
+                "[download:{}] failed to get settings: {}",
+                task_id, e
+            ));
             manager.release();
             process_next_pending(app);
             return;
@@ -248,36 +256,46 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     // 1-2: Register cancel receiver before spawning process
     let mut cancel_rx = manager.register_cancel(task_id);
 
-    // Build yt-dlp command with augmented PATH for .app bundles
-    let mut cmd = binary::command_with_path(&ytdlp_path);
-
-    cmd.arg("--format").arg(&task.format_id);
-    cmd.arg("--output").arg(&task.output_path);
-
-    cmd.arg("--progress-template")
-        .arg(progress::progress_template());
-    cmd.arg("--newline");
-    cmd.arg("--no-playlist");
-    cmd.arg("--no-overwrites");
+    // Build yt-dlp args in a Vec for logging before passing to Command
+    let mut args: Vec<String> = Vec::new();
+    args.extend(["--format".to_string(), task.format_id.clone()]);
+    args.extend(["--output".to_string(), task.output_path.clone()]);
+    args.extend([
+        "--progress-template".to_string(),
+        progress::progress_template(),
+    ]);
+    args.push("--newline".to_string());
+    args.push("--no-playlist".to_string());
+    args.push("--no-overwrites".to_string());
 
     // Sanitize filenames for Windows forbidden characters
     #[cfg(target_os = "windows")]
     {
-        cmd.arg("--windows-filenames");
+        args.push("--windows-filenames".to_string());
     }
 
     // Pass ffmpeg location explicitly if available
     if let Some(ffmpeg_path) = binary::resolve_ffmpeg_path().await {
-        cmd.arg("--ffmpeg-location").arg(&ffmpeg_path);
+        args.extend(["--ffmpeg-location".to_string(), ffmpeg_path]);
     }
 
     // Add cookie browser from settings if available
     if let Some(browser) = &settings.cookie_browser {
-        cmd.arg("--cookies-from-browser").arg(browser);
+        args.extend(["--cookies-from-browser".to_string(), browser.clone()]);
     }
 
     // Add video URL
-    cmd.arg(&task.video_url);
+    args.push(task.video_url.clone());
+
+    // Log the full command before spawning
+    logger::info(&format!(
+        "[download:{}] spawning: {} {:?}",
+        task_id, ytdlp_path, args
+    ));
+
+    // Build command with augmented PATH for .app bundles
+    let mut cmd = binary::command_with_path(&ytdlp_path);
+    cmd.args(&args);
 
     // Disable Python's stdout buffering and ensure UTF-8 output on Windows
     cmd.env("PYTHONUNBUFFERED", "1");
@@ -297,6 +315,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         Ok(c) => c,
         Err(e) => {
             let error_msg = format!("Failed to spawn yt-dlp: {}", e);
+            logger::error(&format!("[download:{}] {}", task_id, error_msg));
             let _ =
                 db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_msg));
             let _ = app.emit(
@@ -417,6 +436,7 @@ async fn execute_download(app: AppHandle, task_id: u64) {
                 Ok(s) => s,
                 Err(e) => {
                     let error_msg = format!("Failed to wait for process: {}", e);
+                    logger::error(&format!("[download:{}] {}", task_id, error_msg));
                     let _ =
                         db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_msg));
                     let _ = app.emit(
@@ -472,12 +492,17 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let _ = stdout_handle.await;
     let stderr_output = stderr_handle.await.unwrap_or_default();
 
-    // Always log stderr for debugging (especially useful on Windows)
+    // Log process exit for debugging
+    let exit_code = status.code();
+    logger::info(&format!(
+        "[download:{}] process exited with code: {:?}",
+        task_id, exit_code
+    ));
     if !stderr_output.is_empty() {
-        eprintln!(
-            "[yt-dlp stderr for task {}]: {}",
+        logger::warn(&format!(
+            "[download:{}] stderr: {}",
             task_id, stderr_output
-        );
+        ));
     }
 
     if status.success() {
@@ -503,6 +528,11 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         };
 
         let _ = db_state.complete_and_record(task_id, completed_at, &history_item);
+
+        logger::info(&format!(
+            "[download:{}] completed successfully, file_size={}",
+            task_id, file_size
+        ));
 
         // Send completion event
         let _ = app.emit(
@@ -550,6 +580,11 @@ async fn execute_download(app: AppHandle, task_id: u64) {
                 stderr_output
             )
         };
+
+        logger::error(&format!(
+            "[download:{}] failed: {}",
+            task_id, error_message
+        ));
 
         let _ =
             db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_message));
@@ -600,7 +635,10 @@ fn process_next_pending(app: AppHandle) {
                     })
                     .await;
                     if let Err(e) = result {
-                        eprintln!("Download task panicked: {:?}", e);
+                        logger::error(&format!(
+                            "[download:{}] task panicked: {:?}",
+                            task_id, e
+                        ));
                         let manager = app_panic_guard.state::<Arc<DownloadManager>>();
                         manager.release();
                         process_next_pending(app_panic_guard);

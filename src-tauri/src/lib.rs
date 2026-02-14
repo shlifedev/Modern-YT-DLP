@@ -45,6 +45,7 @@ pub fn run() {
             ytdlp::download::pause_download,
             ytdlp::download::resume_download,
             ytdlp::commands::set_minimize_to_tray,
+            ytdlp::commands::get_recent_logs,
         ])
         .events(collect_events![ytdlp::types::GlobalDownloadEvent]);
 

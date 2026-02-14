@@ -1,5 +1,6 @@
 <script lang="ts">
   import { commands } from "$lib/bindings"
+  import { invoke } from "@tauri-apps/api/core"
   import { listen } from "@tauri-apps/api/event"
   import { platform } from "@tauri-apps/plugin-os"
   import { page } from "$app/stores"
@@ -16,7 +17,9 @@
   let ffmpegInstalled = $state(false)
   let ffmpegVersion = $state<string | null>(null)
   let ytdlpDebug = $state("")
+  let recentLogs = $state("")
   let showDebug = $state(false)
+  let logsCopied = $state(false)
   let currentPlatform = $state<string>("macos")
   let copiedCmd = $state<string | null>(null)
 
@@ -191,14 +194,26 @@
       e.preventDefault()
       showDebug = !showDebug
       if (showDebug) {
+        logsCopied = false
         // Refresh debug info after overlay is shown
         commands.checkDependencies().then(result => {
           if (result.status === "ok") {
             ytdlpDebug = result.data.ytdlpDebug ?? ""
           }
         }).catch(() => {})
+        // Load recent logs (uses invoke directly until bindings are regenerated)
+        invoke<string>("get_recent_logs").then(data => {
+          recentLogs = data
+        }).catch(() => {})
       }
     }
+  }
+
+  async function copyLogs() {
+    const text = recentLogs || ytdlpDebug || "No logs available"
+    await navigator.clipboard.writeText(text)
+    logsCopied = true
+    setTimeout(() => { logsCopied = false }, 2000)
   }
 
   async function handleCloseChoice(minimize: boolean) {
@@ -555,17 +570,26 @@
       aria-label="Close debug"
     ></button>
     <div class="fixed inset-0 z-[101] flex items-center justify-center pointer-events-none">
-      <div class="bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4 pointer-events-auto">
-        <div class="flex items-center justify-between mb-4">
+      <div class="bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-2xl w-full mx-4 pointer-events-auto max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between mb-4 shrink-0">
           <h3 class="text-sm font-bold text-gray-200 flex items-center gap-2">
             <span class="material-symbols-outlined text-[18px] text-amber-400">bug_report</span>
             Debug Info
           </h3>
-          <button onclick={() => showDebug = false} class="text-gray-500 hover:text-gray-300 transition-colors">
-            <span class="material-symbols-outlined text-[18px]">close</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              onclick={copyLogs}
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors {logsCopied ? 'bg-green-500/20 text-green-400' : 'bg-white/[0.06] text-gray-400 hover:bg-white/[0.1] hover:text-gray-200'}"
+            >
+              <span class="material-symbols-outlined text-[14px]">{logsCopied ? "check" : "content_copy"}</span>
+              {logsCopied ? "Copied" : "Copy Logs"}
+            </button>
+            <button onclick={() => showDebug = false} class="text-gray-500 hover:text-gray-300 transition-colors">
+              <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
         </div>
-        <div class="space-y-3">
+        <div class="space-y-3 overflow-y-auto flex-1 min-h-0">
           <div>
             <p class="text-xs text-gray-400 mb-1">yt-dlp status</p>
             <p class="text-sm {depsInstalled ? 'text-green-400' : 'text-red-400'}">
@@ -575,13 +599,21 @@
           {#if ytdlpDebug}
             <div>
               <p class="text-xs text-gray-400 mb-1">Detection log</p>
-              <pre class="text-xs text-gray-300 bg-black/40 rounded-lg p-3 whitespace-pre-wrap break-all font-mono">{ytdlpDebug}</pre>
+              <pre class="text-xs text-gray-300 bg-black/40 rounded-lg p-3 whitespace-pre-wrap break-all font-mono max-h-32 overflow-y-auto">{ytdlpDebug}</pre>
             </div>
           {:else if depsInstalled}
             <p class="text-xs text-gray-500">No issues detected.</p>
           {/if}
+          <div>
+            <p class="text-xs text-gray-400 mb-1">Recent Logs</p>
+            {#if recentLogs}
+              <pre class="text-xs text-gray-300 bg-black/40 rounded-lg p-3 whitespace-pre-wrap break-all font-mono max-h-64 overflow-y-auto">{recentLogs}</pre>
+            {:else}
+              <p class="text-xs text-gray-500">No logs available.</p>
+            {/if}
+          </div>
         </div>
-        <p class="text-[10px] text-gray-600 mt-4 text-right">Press F10 to close</p>
+        <p class="text-[10px] text-gray-600 mt-4 text-right shrink-0">Press F10 to close</p>
       </div>
     </div>
   {/if}

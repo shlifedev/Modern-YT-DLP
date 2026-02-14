@@ -1,5 +1,5 @@
 use chrono::Local;
-use std::fs::{create_dir_all, OpenOptions};
+use std::fs::{self, create_dir_all, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -64,4 +64,20 @@ pub fn warn(message: &str) {
 /// Log an info message
 pub fn info(message: &str) {
     write_log("INFO", message);
+}
+
+/// Read the last N lines from the log file
+pub fn read_recent_logs(max_lines: usize) -> String {
+    let Some(log_path) = get_log_path() else {
+        return "Logger not initialized".to_string();
+    };
+
+    let content = match fs::read_to_string(log_path) {
+        Ok(c) => c,
+        Err(e) => return format!("Failed to read log file: {}", e),
+    };
+
+    let lines: Vec<&str> = content.lines().collect();
+    let start = lines.len().saturating_sub(max_lines);
+    lines[start..].join("\n")
 }
