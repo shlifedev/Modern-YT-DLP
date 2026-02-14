@@ -1,6 +1,7 @@
 <script lang="ts">
   import { commands } from "$lib/bindings"
   import { onMount, onDestroy } from "svelte"
+  import { t, getDateLocale } from "$lib/i18n/index.svelte"
 
   let items = $state<any[]>([])
   let totalCount = $state(0)
@@ -37,7 +38,7 @@
 
   // 4-2: Add try/catch to prevent unhandled errors
   async function handleDelete(id: number) {
-    if (!confirm("이 항목을 삭제하시겠습니까?")) return
+    if (!confirm(t("history.deleteConfirm"))) return
     try {
       const result = await commands.deleteHistoryItem(id)
       if (result.status === "ok") await loadHistory()
@@ -50,7 +51,7 @@
   function nextPage() { if (currentPage < totalPages - 1) { currentPage++; loadHistory() } }
 
   function formatDate(ts: number): string {
-    return new Date(ts * 1000).toLocaleString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    return new Date(ts * 1000).toLocaleString(getDateLocale(), { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
   }
   // 5-3: Fix formatSize(0) returning "-"
   function formatSize(bytes: number | null): string {
@@ -65,8 +66,8 @@
 
 <div class="flex-1 flex flex-col h-full overflow-y-auto hide-scrollbar">
   <header class="px-6 py-4 shrink-0">
-    <h2 class="text-xl font-display font-bold text-gray-100">Library</h2>
-    <p class="text-gray-400 mt-1">Your download history</p>
+    <h2 class="text-xl font-display font-bold text-gray-100">{t("history.title")}</h2>
+    <p class="text-gray-400 mt-1">{t("history.subtitle")}</p>
   </header>
 
   <!-- Search -->
@@ -78,7 +79,7 @@
       <input
         type="text"
         class="w-full h-10 bg-yt-highlight text-gray-100 rounded-xl pl-12 pr-4 border border-white/[0.06] focus:ring-2 focus:ring-yt-primary focus:outline-none placeholder-gray-600 text-sm"
-        placeholder="제목으로 검색..."
+        placeholder={t("history.searchPlaceholder")}
         value={search}
         oninput={(e) => handleSearch((e.target as HTMLInputElement).value)}
       />
@@ -93,7 +94,7 @@
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center py-20">
         <span class="material-symbols-outlined text-gray-600 text-6xl">library_books</span>
-        <p class="text-gray-400 mt-4 text-lg">다운로드 이력이 없습니다</p>
+        <p class="text-gray-400 mt-4 text-lg">{t("history.empty")}</p>
       </div>
     {:else}
       {#each items as item}

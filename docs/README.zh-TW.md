@@ -1,5 +1,9 @@
 # yt-dlp Modern GUI
 
+<p align="center">
+  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="600">
+</p>
+
 一個現代化、跨平台的桌面應用程式，用於使用 yt-dlp 下載影片。
 採用 Tauri 2.0（Rust）和 SvelteKit 構建，提供乾淨直觀的介面來管理影片下載。
 
@@ -15,11 +19,6 @@
 - Cookie 支援以下載需認證的內容
 - 重複下載偵測
 - 跨平台支援（Windows、macOS、Linux）
-
-## 技術棧
-
-- **後端**：Tauri 2.0 / Rust
-- **前端**：SvelteKit 2.x / Svelte 5 / Tailwind CSS v4 / Skeleton UI v4
 
 ## 授權
 

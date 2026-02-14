@@ -2,6 +2,7 @@
   import { commands, type PlaylistResult, type DuplicateCheckResult } from "$lib/bindings"
   import { listen } from "@tauri-apps/api/event"
   import { onMount, onDestroy } from "svelte"
+  import { t } from "$lib/i18n/index.svelte"
 
   // URL & analyze state
   let url = $state("")
@@ -229,7 +230,7 @@
         return
       }
       if (!valResult.data.valid) {
-        error = "유효하지 않은 YouTube URL입니다"
+        error = t("download.invalidUrl")
         return
       }
 
@@ -334,7 +335,7 @@
         const dupResult = await commands.checkDuplicate(request.videoId)
         if (dupResult.status === "ok" && dupResult.data) {
           if (dupResult.data.inQueue) {
-            error = "이미 다운로드 큐에 있는 영상입니다."
+            error = t("download.alreadyInQueue")
             return
           }
           if (dupResult.data.inHistory) {
@@ -466,7 +467,7 @@
       }
 
       if (skippedQueue > 0) {
-        error = `${skippedQueue}개 영상이 이미 큐에 있어 건너뛰었습니다.`
+        error = t("download.skippedQueue", { count: skippedQueue })
       }
       window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount - skippedQueue } }))
       url = ""
@@ -536,7 +537,7 @@
       }
 
       if (skippedQueue > 0) {
-        error = `${skippedQueue}개 영상이 이미 큐에 있어 건너뛰었습니다.`
+        error = t("download.skippedQueue", { count: skippedQueue })
       }
       window.dispatchEvent(new CustomEvent("queue-added", { detail: { count: totalCount - skippedQueue } }))
       url = ""
@@ -588,18 +589,18 @@
           <div class="flex items-center gap-2 min-w-0">
             <span class="material-symbols-outlined text-amber-400 text-[20px] shrink-0">warning</span>
             <span class="text-amber-400 text-xs truncate">
-              "{videoInfo?.title || pendingRequest?.title}"은(는) 이미 다운로드한 적이 있습니다.
+              {t("download.alreadyDownloaded", { title: videoInfo?.title || pendingRequest?.title || "" })}
             </span>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
               class="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors"
               onclick={confirmDuplicate}
-            >다시 다운로드</button>
+            >{t("download.redownload")}</button>
             <button
               class="px-3 py-1.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 text-xs font-medium transition-colors"
               onclick={cancelDuplicate}
-            >취소</button>
+            >{t("download.cancel")}</button>
           </div>
         </div>
       {/if}
@@ -610,7 +611,7 @@
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-blue-500 text-[18px] animate-spin">progress_activity</span>
             <span class="text-blue-400 text-xs font-medium">
-              메타데이터를 조회하는 중...
+              {t("download.analyzing")}
               {#if analyzeElapsed > 0}({analyzeElapsed}초){/if}
             </span>
           </div>
@@ -628,7 +629,7 @@
           </div>
           <input
             class="w-full h-10 bg-yt-surface text-gray-100 rounded-lg pl-11 pr-4 border border-white/[0.06] focus:ring-2 focus:ring-yt-primary focus:outline-none placeholder-gray-600 font-mono text-sm"
-            placeholder="Paste YouTube, Twitch, or video URL here..."
+            placeholder={t("download.urlPlaceholder")}
             type="text"
             bind:value={url}
             onkeydown={handleKeydown}
@@ -644,13 +645,13 @@
         >
           <span class="material-symbols-outlined text-[18px]">download</span>
           {#if downloadingAll}
-            <span>Queuing... ({batchProgress.current}/{batchProgress.total})</span>
+            <span>{t("download.queuing")} ({batchProgress.current}/{batchProgress.total})</span>
           {:else if playlistResult && !videoInfo && selectedEntries.size > 0}
-            <span>Download Selected ({selectedEntries.size})</span>
+            <span>{t("download.downloadSelected")} ({selectedEntries.size})</span>
           {:else if playlistResult && !videoInfo}
-            <span>Download All ({playlistResult.videoCount ?? playlistResult.entries.length})</span>
+            <span>{t("download.downloadAll")} ({playlistResult.videoCount ?? playlistResult.entries.length})</span>
           {:else}
-            <span>Download</span>
+            <span>{t("download.download")}</span>
           {/if}
         </button>
       </div>
@@ -664,7 +665,7 @@
               onclick={() => { videoInfo = null }}
             >
               <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-              플레이리스트로 돌아가기 ({playlistResult.videoCount ?? playlistResult.entries.length}개 영상)
+              {t("download.backToPlaylist")} ({t("download.videos", { count: playlistResult.videoCount ?? playlistResult.entries.length })})
             </button>
           {/if}
           <div class="flex items-center gap-3">
@@ -689,7 +690,7 @@
               <div class="flex-1 min-w-0">
                 <h3 class="font-display font-semibold text-sm text-gray-100 truncate">{playlistResult.title}</h3>
                 <p class="text-gray-400 text-xs mt-0.5">
-                  {#if playlistResult.channelName}{playlistResult.channelName} &middot; {/if}{playlistResult.videoCount ?? playlistResult.entries.length}개 영상
+                  {#if playlistResult.channelName}{playlistResult.channelName} &middot; {/if}{t("download.videos", { count: playlistResult.videoCount ?? playlistResult.entries.length })}
                 </p>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
@@ -698,7 +699,7 @@
                   onclick={toggleSelectAll}
                 >
                   <span class="material-symbols-outlined text-[16px]">{allSelected ? "deselect" : "select_all"}</span>
-                  {allSelected ? "Deselect" : "Select All"}
+                  {allSelected ? t("download.deselect") : t("download.selectAll")}
                 </button>
                 <button
                   class="px-3 py-1.5 rounded-md bg-yt-primary hover:bg-blue-500 text-white text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-50"
@@ -709,9 +710,9 @@
                   {#if downloadingAll}
                     {batchProgress.current}/{batchProgress.total}
                   {:else if selectedEntries.size > 0}
-                    Download ({selectedEntries.size})
+                    {t("download.download")} ({selectedEntries.size})
                   {:else}
-                    Download All
+                    {t("download.downloadAll")}
                   {/if}
                 </button>
               </div>
@@ -765,7 +766,7 @@
                     </div>
                   {/if}
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm text-gray-100 truncate">{entry.title || "제목 없음"}</p>
+                    <p class="text-sm text-gray-100 truncate">{entry.title || t("download.noTitle")}</p>
                     {#if entry.duration}
                       <p class="text-xs text-gray-400 mt-0.5">{formatDuration(entry.duration)}</p>
                     {/if}
@@ -786,13 +787,13 @@
               >
                 {#if loadingMore}
                   <span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
-                  불러오는 중...
+                  {t("download.loading")}
                 {:else}
                   <span class="material-symbols-outlined text-[16px]">expand_more</span>
                   {#if playlistResult.videoCount}
-                    더 보기 ({playlistResult.entries.length} / {playlistResult.videoCount})
+                    {t("download.loadMoreCount", { loaded: playlistResult.entries.length, total: playlistResult.videoCount })}
                   {:else}
-                    더 보기 ({playlistResult.entries.length}개 로드됨)
+                    {t("download.loadMoreLoaded", { loaded: playlistResult.entries.length })}
                   {/if}
                 {/if}
               </button>
@@ -806,7 +807,7 @@
         <!-- Format -->
         <div class="flex items-center gap-3 py-3">
           <span class="material-symbols-outlined text-[20px] text-purple-600">movie</span>
-          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">Format</span>
+          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">{t("download.format")}</span>
           <div class="flex gap-1 bg-yt-surface p-0.5 rounded-lg border border-white/[0.06]">
             <button
               class="px-3 py-1.5 rounded-md text-xs font-medium transition-colors {format === 'mp4' ? 'bg-yt-primary text-white shadow-sm' : 'text-gray-400 hover:text-gray-100 hover:bg-white/[0.06]'}"
@@ -826,7 +827,7 @@
         <!-- Quality -->
         <div class="flex items-center gap-3 py-3">
           <span class="material-symbols-outlined text-[20px] text-amber-400">hd</span>
-          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">Quality</span>
+          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">{t("download.quality")}</span>
           <div class="relative flex-1">
             <select
               class="w-full bg-yt-surface text-gray-100 text-sm border border-white/[0.06] rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-yt-primary focus:outline-none appearance-none cursor-pointer"
@@ -847,9 +848,9 @@
         <!-- Subtitles -->
         <div class="flex items-center gap-3 py-3">
           <span class="material-symbols-outlined text-[20px] text-emerald-600">subtitles</span>
-          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">Subtitles</span>
+          <span class="text-sm font-medium text-gray-100 w-20 shrink-0">{t("download.subtitles")}</span>
           <div class="flex items-center gap-2 ml-auto">
-            <span class="text-xs text-gray-400">Embed</span>
+            <span class="text-xs text-gray-400">{t("download.embed")}</span>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" bind:checked={embedSubs} class="sr-only peer" />
               <div class="w-9 h-5 bg-white/10 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yt-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-white/10 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yt-primary"></div>
@@ -861,7 +862,7 @@
         <div class="py-3">
           <div class="flex items-center gap-3">
             <span class="material-symbols-outlined text-[20px] text-violet-600">edit_note</span>
-            <span class="text-sm font-medium text-gray-100 w-20 shrink-0">Filename</span>
+            <span class="text-sm font-medium text-gray-100 w-20 shrink-0">{t("download.filename")}</span>
             <span class="text-xs text-gray-400 font-mono truncate flex-1">{getTemplatePreview()}</span>
             <button
               class="flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors {filenameExpanded ? 'bg-violet-500/10 text-violet-400' : 'text-gray-500 hover:bg-white/[0.06] hover:text-gray-400'}"
@@ -874,14 +875,14 @@
           {#if filenameExpanded}
             <div class="mt-2 pl-8 space-y-2">
               <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400">Mode</span>
+                <span class="text-xs text-gray-400">{t("download.mode")}</span>
                 <button
                   class="template-chip relative flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors {useAdvancedTemplate ? 'bg-violet-500/10 text-violet-400' : 'bg-white/[0.04] text-gray-400 hover:bg-white/[0.06]'}"
                   onclick={() => { useAdvancedTemplate = !useAdvancedTemplate; saveTemplateSettings() }}
                 >
                   <span class="material-symbols-outlined text-[14px]">code</span>
-                  Advanced
-                  <span class="template-tooltip">yt-dlp 템플릿 문법으로 직접 입력</span>
+                  {t("download.advanced")}
+                  <span class="template-tooltip">{t("download.advancedTooltip")}</span>
                 </button>
               </div>
 
@@ -897,18 +898,18 @@
                 <div class="flex flex-wrap gap-2">
                   <label class="template-chip relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors {templateUploaderFolder ? 'border-violet-500/30 bg-violet-500/10 text-violet-400' : 'border-white/[0.06] bg-yt-surface text-gray-400 hover:bg-white/[0.03]'}">
                     <input type="checkbox" bind:checked={templateUploaderFolder} onchange={saveTemplateSettings} class="sr-only" />
-                    <span class="text-xs font-medium">Uploader Folder</span>
-                    <span class="template-tooltip">채널/업로더 이름으로 하위 폴더 생성</span>
+                    <span class="text-xs font-medium">{t("download.uploaderFolder")}</span>
+                    <span class="template-tooltip">{t("download.uploaderFolderTooltip")}</span>
                   </label>
                   <label class="template-chip relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors {templateUploadDate ? 'border-violet-500/30 bg-violet-500/10 text-violet-400' : 'border-white/[0.06] bg-yt-surface text-gray-400 hover:bg-white/[0.03]'}">
                     <input type="checkbox" bind:checked={templateUploadDate} onchange={saveTemplateSettings} class="sr-only" />
-                    <span class="text-xs font-medium">Upload Date</span>
-                    <span class="template-tooltip">파일명 앞에 업로드 날짜 추가</span>
+                    <span class="text-xs font-medium">{t("download.uploadDate")}</span>
+                    <span class="template-tooltip">{t("download.uploadDateTooltip")}</span>
                   </label>
                   <label class="template-chip relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors {templateVideoId ? 'border-violet-500/30 bg-violet-500/10 text-violet-400' : 'border-white/[0.06] bg-yt-surface text-gray-400 hover:bg-white/[0.03]'}">
                     <input type="checkbox" bind:checked={templateVideoId} onchange={saveTemplateSettings} class="sr-only" />
-                    <span class="text-xs font-medium">Video ID</span>
-                    <span class="template-tooltip">파일명 끝에 영상 ID 추가</span>
+                    <span class="text-xs font-medium">{t("download.videoId")}</span>
+                    <span class="template-tooltip">{t("download.videoIdTooltip")}</span>
                   </label>
                 </div>
               {/if}
@@ -934,7 +935,7 @@
               {/if}
               <div>
                 <p class="text-sm text-gray-100 font-medium">
-                  {#if downloading}다운로드 중... {progress.toFixed(0)}%{:else if downloadStatus === "completed"}다운로드 완료!{:else}다운로드 실패{/if}
+                  {#if downloading}{t("download.downloading", { percent: progress.toFixed(0) })}{:else if downloadStatus === "completed"}{t("download.downloadComplete")}{:else}{t("download.downloadFailed")}{/if}
                 </p>
                 {#if downloading && speed}
                   <p class="text-gray-400 text-xs">{speed} &middot; ETA: {eta}</p>

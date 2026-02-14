@@ -22,8 +22,10 @@ static PLAYLIST_PATTERN: Lazy<Regex> = Lazy::new(|| {
 static CHANNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
     vec![
         Regex::new(r"^https?://(?:www\.)?youtube\.com/channel/([a-zA-Z0-9_-]+)").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/@([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)").unwrap(),
-        Regex::new(r"^https?://(?:www\.)?youtube\.com/c/([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)").unwrap(),
+        Regex::new(r"^https?://(?:www\.)?youtube\.com/@([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)")
+            .unwrap(),
+        Regex::new(r"^https?://(?:www\.)?youtube\.com/c/([a-zA-Z0-9_.%\x{0080}-\x{FFFF}-]+)")
+            .unwrap(),
     ]
 });
 
@@ -363,11 +365,14 @@ pub async fn fetch_playlist_info(
         .map(|s| s.to_string());
 
     // Try to extract total count from yt-dlp's playlist_count field
-    let video_count: Option<u64> = first_entry["playlist_count"].as_u64().or(if page_size >= 99999 {
-        Some(all_entries.len() as u64) // Full fetch: len() is accurate
-    } else {
-        None // Paginated: total count unknown
-    });
+    let video_count: Option<u64> =
+        first_entry["playlist_count"]
+            .as_u64()
+            .or(if page_size >= 99999 {
+                Some(all_entries.len() as u64) // Full fetch: len() is accurate
+            } else {
+                None // Paginated: total count unknown
+            });
 
     // Map entries to PlaylistEntry structs
     let mut playlist_entries: Vec<PlaylistEntry> = Vec::new();

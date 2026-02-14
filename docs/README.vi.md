@@ -1,5 +1,9 @@
 # yt-dlp Modern GUI
 
+<p align="center">
+  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="600">
+</p>
+
 Một ứng dụng máy tính để bàn hiện đại, đa nền tảng để tải xuống video bằng yt-dlp.
 Được xây dựng bằng Tauri 2.0 (Rust) và SvelteKit, cung cấp một giao diện sạch sẽ và trực quan để quản lý tải xuống video.
 
@@ -15,11 +19,6 @@ Một ứng dụng máy tính để bàn hiện đại, đa nền tảng để t
 - Hỗ trợ cookie cho nội dung xác thực
 - Phát hiện tải xuống trùng lặp
 - Hỗ trợ đa nền tảng (Windows, macOS, Linux)
-
-## Công nghệ sử dụng
-
-- **Backend**: Tauri 2.0 / Rust
-- **Frontend**: SvelteKit 2.x / Svelte 5 / Tailwind CSS v4 / Skeleton UI v4
 
 ## Giấy phép
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { commands } from "$lib/bindings"
   import { onMount, onDestroy } from "svelte"
+  import { t } from "$lib/i18n/index.svelte"
 
   let queue = $state<any[]>([])
   let firstLoad = $state(true)
@@ -72,8 +73,8 @@
   <header class="px-6 py-4 shrink-0">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-xl font-display font-bold text-gray-100">Downloads</h2>
-        <p class="text-gray-400 mt-1">Manage your download queue</p>
+        <h2 class="text-xl font-display font-bold text-gray-100">{t("queue.title")}</h2>
+        <p class="text-gray-400 mt-1">{t("queue.subtitle")}</p>
       </div>
       <div class="flex gap-2">
         <button
@@ -82,7 +83,7 @@
           disabled={activeCount + pendingCount === 0}
         >
           <span class="material-symbols-outlined text-[18px] align-middle mr-1">cancel</span>
-          Cancel All
+          {t("queue.cancelAll")}
         </button>
         <button
           class="px-4 py-2 rounded-xl bg-red-500/10 text-red-600 hover:bg-red-500/20 text-sm font-medium transition-colors disabled:opacity-50"
@@ -90,7 +91,7 @@
           disabled={completedCount === 0}
         >
           <span class="material-symbols-outlined text-[18px] align-middle mr-1">delete_sweep</span>
-          Clear Completed
+          {t("queue.clearCompleted")}
         </button>
       </div>
     </div>
@@ -99,15 +100,15 @@
     <div class="flex gap-4 mt-4">
       <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
         <span class="material-symbols-outlined text-yt-primary text-[18px]">downloading</span>
-        <span class="text-sm"><span class="font-bold text-gray-100">{activeCount}</span> <span class="text-gray-400">Active</span></span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{activeCount}</span> <span class="text-gray-400">{t("queue.active")}</span></span>
       </div>
       <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
         <span class="material-symbols-outlined text-green-600 text-[18px]">check_circle</span>
-        <span class="text-sm"><span class="font-bold text-gray-100">{completedCount}</span> <span class="text-gray-400">Completed</span></span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{completedCount}</span> <span class="text-gray-400">{t("queue.completed")}</span></span>
       </div>
       <div class="bg-yt-highlight rounded-xl px-4 py-2 flex items-center gap-2 border border-white/[0.06]">
         <span class="material-symbols-outlined text-gray-500 text-[18px]">list</span>
-        <span class="text-sm"><span class="font-bold text-gray-100">{queue.length}</span> <span class="text-gray-400">Total</span></span>
+        <span class="text-sm"><span class="font-bold text-gray-100">{queue.length}</span> <span class="text-gray-400">{t("queue.total")}</span></span>
       </div>
     </div>
   </header>
@@ -120,8 +121,8 @@
     {:else if queue.length === 0}
       <div class="flex flex-col items-center justify-center py-20 text-center">
         <span class="material-symbols-outlined text-gray-600 text-6xl">inbox</span>
-        <p class="text-gray-400 mt-4 text-lg">대기열이 비어 있습니다</p>
-        <p class="text-gray-400 text-sm mt-1">홈에서 다운로드를 시작하세요</p>
+        <p class="text-gray-400 mt-4 text-lg">{t("queue.emptyTitle")}</p>
+        <p class="text-gray-400 text-sm mt-1">{t("queue.emptyDesc")}</p>
       </div>
     {:else}
       {#each queue as item (item.id)}
@@ -165,7 +166,7 @@
             {#if item.status === "completed"}
               <span class="flex items-center gap-1.5 text-green-600 text-xs font-medium">
                 <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                Completed
+                {t("queue.completedStatus")}
               </span>
             {:else if item.status === "downloading"}
               <span class="text-gray-100 text-sm font-bold font-mono">{(item.progress || 0).toFixed(0)}%</span>
@@ -175,10 +176,10 @@
             {:else if item.status === "failed"}
               <span class="flex items-center gap-1.5 text-red-600 text-xs font-medium">
                 <span class="material-symbols-outlined text-[16px]">error</span>
-                Failed
+                {t("queue.failedStatus")}
               </span>
             {:else}
-              <span class="text-gray-500 text-xs">Pending</span>
+              <span class="text-gray-500 text-xs">{t("queue.pending")}</span>
             {/if}
           </div>
         </div>

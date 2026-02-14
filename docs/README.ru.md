@@ -1,5 +1,9 @@
 # yt-dlp Modern GUI
 
+<p align="center">
+  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="600">
+</p>
+
 Современное кроссплатформенное настольное приложение для загрузки видео с использованием yt-dlp.
 Построено на Tauri 2.0 (Rust) и SvelteKit, предоставляя чистый и интуитивный интерфейс для управления загрузками видео.
 
@@ -15,11 +19,6 @@
 - Поддержка файлов Cookie для аутентифицированного контента
 - Обнаружение дублирующихся загрузок
 - Кроссплатформенная поддержка (Windows, macOS, Linux)
-
-## Технический стек
-
-- **Backend**: Tauri 2.0 / Rust
-- **Frontend**: SvelteKit 2.x / Svelte 5 / Tailwind CSS v4 / Skeleton UI v4
 
 ## Лицензия
 

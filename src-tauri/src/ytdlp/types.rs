@@ -258,6 +258,8 @@ pub struct AppSettings {
     pub template_uploader_folder: bool,
     pub template_upload_date: bool,
     pub template_video_id: bool,
+    pub language: Option<String>,
+    pub theme: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -273,6 +275,8 @@ impl Default for AppSettings {
             template_uploader_folder: false,
             template_upload_date: false,
             template_video_id: false,
+            language: None,
+            theme: None,
         }
     }
 }

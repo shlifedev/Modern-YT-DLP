@@ -4,6 +4,8 @@
   import { listen } from "@tauri-apps/api/event"
   import { page } from "$app/stores"
   import { onMount, onDestroy } from "svelte"
+  import { t, initLocale } from "$lib/i18n/index.svelte"
+  import { initTheme } from "$lib/theme/index.svelte"
 
   let { children } = $props()
 
@@ -30,7 +32,7 @@
   let queueBounce = $state(false)
 
   const navItems = [
-    { href: "/tools/ytdlp/settings", label: "Settings", icon: "settings" },
+    { href: "/tools/ytdlp/settings", icon: "settings" },
   ]
 
   function isActive(href: string): boolean {
@@ -106,7 +108,7 @@
 
   function handleQueueAdded(e: Event) {
     const count = (e as CustomEvent).detail?.count ?? 1
-    showToast(`${count}개 영상이 Queue에 등록되었습니다.`)
+    showToast(t("layout.queueAdded", { count }))
 
     queueBounce = false
     requestAnimationFrame(() => { queueBounce = true })
@@ -118,12 +120,27 @@
   onMount(async () => {
     await checkDeps()
 
+    // Initialize i18n and theme from saved settings
+    try {
+      const settingsResult = await commands.getSettings()
+      if (settingsResult.status === "ok") {
+        await initLocale(settingsResult.data.language)
+        initTheme(settingsResult.data.theme)
+      } else {
+        await initLocale()
+        initTheme()
+      }
+    } catch (e) {
+      await initLocale()
+      initTheme()
+    }
+
     try {
       const unlistenFn = await listen("download-event", (event: any) => {
         const data = event.payload
         if (data.eventType === "completed") {
           const title = activeDownloads.find(d => d.id === data.taskId)?.title
-          showToast(`${title || "영상"}의 다운로드가 완료되었습니다.`, "download_done")
+          showToast(t("layout.downloadComplete", { title: title || "video" }), "download_done")
         }
         loadActiveDownloads()
       })
@@ -159,7 +176,7 @@
   async function handleInstall() {
     installing = true
     installError = ""
-    installMessage = "yt-dlp 다운로드 중..."
+    installMessage = t("layout.downloading")
 
     try {
       const channel = new Channel()
@@ -205,10 +222,10 @@
         <button
           onclick={() => popupOpen = !popupOpen}
           class="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/[0.06] hover:text-gray-100 transition-colors relative {queueBounce ? 'animate-queue-bounce' : ''}"
-          title="Active Downloads"
+          title={t("nav.activeDownloads")}
         >
           <span class="material-symbols-outlined text-[20px]">downloading</span>
-          <span class="text-sm hidden sm:inline">Queue</span>
+          <span class="text-sm hidden sm:inline">{t("nav.queue")}</span>
           {#if (activeCount + pendingCount) > 0}
             <span class="absolute top-1 right-1 w-5 h-5 bg-yt-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
               {activeCount + pendingCount}
@@ -226,7 +243,7 @@
             {isActive(item.href) ? 'bg-yt-primary/10 text-yt-primary font-medium' : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-100'}"
         >
           <span class="material-symbols-outlined text-[20px]">{item.icon}</span>
-          <span class="hidden sm:inline">{item.label}</span>
+          <span class="hidden sm:inline">{t("nav.settings")}</span>
         </a>
       {/each}
     </div>
@@ -240,7 +257,7 @@
       <div class="flex-1 flex items-center justify-center z-10">
         <div class="flex flex-col items-center gap-3">
           <span class="material-symbols-outlined text-yt-primary text-4xl animate-spin">progress_activity</span>
-          <p class="text-sm text-gray-400">의존성 확인 중...</p>
+          <p class="text-sm text-gray-400">{t("layout.checkingDeps")}</p>
         </div>
       </div>
     {:else if !depsInstalled}
@@ -248,8 +265,8 @@
         <div class="w-16 h-16 rounded-xl bg-yt-primary/20 flex items-center justify-center">
           <span class="material-symbols-outlined text-yt-primary text-4xl">download</span>
         </div>
-        <h2 class="font-display text-2xl font-bold text-gray-100">yt-dlp 설정 필요</h2>
-        <p class="text-gray-400">YouTube 다운로드를 위해 yt-dlp를 설치해야 합니다.</p>
+        <h2 class="font-display text-2xl font-bold text-gray-100">{t("layout.setupRequired")}</h2>
+        <p class="text-gray-400">{t("layout.setupDesc")}</p>
 
         {#if installError}
           <div class="bg-red-500/10 border border-red-500/20 rounded-xl px-6 py-3 text-red-400 text-sm max-w-md">
@@ -267,7 +284,7 @@
             class="px-8 py-3 rounded-xl bg-yt-primary hover:bg-blue-500 text-white font-bold transition-all shadow-lg shadow-yt-primary/20"
             onclick={handleInstall}
           >
-            yt-dlp 설치하기
+            {t("layout.install")}
           </button>
         {/if}
       </div>
@@ -291,14 +308,14 @@
     <div class="fixed top-12 right-4 w-96 max-h-[70vh] bg-yt-surface rounded-xl shadow-2xl shadow-black/40 z-50 flex flex-col border border-white/[0.06] animate-popup-in">
       <!-- Header -->
       <div class="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between shrink-0">
-        <h3 class="font-display font-semibold text-sm text-gray-100">Queue</h3>
+        <h3 class="font-display font-semibold text-sm text-gray-100">{t("nav.queue")}</h3>
         <div class="flex items-center gap-1">
           {#if (activeCount + pendingCount) > 0}
             <button
               onclick={handleCancelAll}
               class="text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-2 py-1 rounded-lg transition-colors"
             >
-              Cancel All
+              {t("layout.cancelAll")}
             </button>
           {/if}
           <button onclick={() => popupOpen = false} class="text-gray-500 hover:text-gray-400 transition-colors p-1 rounded-lg hover:bg-white/[0.06]">
@@ -312,7 +329,7 @@
         {#if activeDownloads.length === 0}
           <div class="flex flex-col items-center justify-center py-12 text-center px-4">
             <span class="material-symbols-outlined text-gray-600 text-4xl">cloud_done</span>
-            <p class="text-gray-400 text-sm mt-2">활성 다운로드가 없습니다</p>
+            <p class="text-gray-400 text-sm mt-2">{t("layout.noActiveDownloads")}</p>
           </div>
         {:else}
           <div class="p-3 space-y-2">
@@ -326,7 +343,7 @@
                   {:else}
                     <span class="inline-flex items-center gap-1 text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
                       <span class="material-symbols-outlined text-[14px]">schedule</span>
-                      Queued
+                      {t("layout.queued")}
                     </span>
                   {/if}
                 </div>
@@ -344,7 +361,7 @@
         {#if recentCompleted.length > 0}
           <div class="border-t border-white/[0.06] mt-2">
             <div class="px-4 py-2">
-              <h4 class="text-xs text-gray-400 font-medium uppercase tracking-wider">Recent</h4>
+              <h4 class="text-xs text-gray-400 font-medium uppercase tracking-wider">{t("layout.recent")}</h4>
             </div>
             <div class="px-3 pb-3 space-y-1">
               {#each recentCompleted as item}
@@ -361,7 +378,7 @@
       <!-- Footer: View All -->
       <div class="border-t border-white/[0.06] px-4 py-2.5 shrink-0">
         <a href="/tools/ytdlp/queue" class="flex items-center justify-center gap-1.5 text-sm text-yt-primary hover:text-blue-400 font-medium transition-colors" onclick={() => popupOpen = false}>
-          <span>View All</span>
+          <span>{t("layout.viewAll")}</span>
           <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
         </a>
       </div>

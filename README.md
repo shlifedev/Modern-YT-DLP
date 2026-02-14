@@ -1,5 +1,9 @@
 # yt-dlp Modern GUI
 
+<p align="center">
+  <img src="app-image.png" alt="yt-dlp Modern GUI" width="600">
+</p>
+
 A modern, cross-platform desktop application for downloading videos using yt-dlp.
 Built with Tauri 2.0 (Rust) and SvelteKit, providing a clean and intuitive interface for managing video downloads.
 
@@ -15,11 +19,6 @@ Built with Tauri 2.0 (Rust) and SvelteKit, providing a clean and intuitive inter
 - Cookie support for authenticated content
 - Duplicate download detection
 - Cross-platform support (Windows, macOS, Linux)
-
-## Tech Stack
-
-- **Backend**: Tauri 2.0 / Rust
-- **Frontend**: SvelteKit 2.x / Svelte 5 / Tailwind CSS v4 / Skeleton UI v4
 
 ## License
 

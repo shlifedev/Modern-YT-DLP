@@ -68,6 +68,14 @@ pub fn get_settings(app: &AppHandle) -> Result<AppSettings, AppError> {
         .and_then(|v| v.as_bool())
         .unwrap_or(defaults.template_video_id);
 
+    let language = store
+        .get("language")
+        .and_then(|v| v.as_str().map(String::from));
+
+    let theme = store
+        .get("theme")
+        .and_then(|v| v.as_str().map(String::from));
+
     Ok(AppSettings {
         download_path,
         default_quality,
@@ -79,6 +87,8 @@ pub fn get_settings(app: &AppHandle) -> Result<AppSettings, AppError> {
         template_uploader_folder,
         template_upload_date,
         template_video_id,
+        language,
+        theme,
     })
 }
 
@@ -145,6 +155,16 @@ pub fn update_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), Ap
         "templateVideoId",
         serde_json::to_value(settings.template_video_id)
             .map_err(|e| AppError::Custom(e.to_string()))?,
+    );
+
+    store.set(
+        "language",
+        serde_json::to_value(&settings.language).map_err(|e| AppError::Custom(e.to_string()))?,
+    );
+
+    store.set(
+        "theme",
+        serde_json::to_value(&settings.theme).map_err(|e| AppError::Custom(e.to_string()))?,
     );
 
     store.save().map_err(|e| AppError::Custom(e.to_string()))?;
@@ -235,6 +255,14 @@ pub fn get_settings_from_path(app_data_dir: &std::path::Path) -> Result<AppSetti
         .and_then(|v| v.as_bool())
         .unwrap_or(defaults.template_video_id);
 
+    let language = value
+        .get("language")
+        .and_then(|v| v.as_str().map(String::from));
+
+    let theme = value
+        .get("theme")
+        .and_then(|v| v.as_str().map(String::from));
+
     Ok(AppSettings {
         download_path,
         default_quality,
@@ -246,5 +274,7 @@ pub fn get_settings_from_path(app_data_dir: &std::path::Path) -> Result<AppSetti
         template_uploader_folder,
         template_upload_date,
         template_video_id,
+        language,
+        theme,
     })
 }
