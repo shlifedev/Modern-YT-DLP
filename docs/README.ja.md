@@ -28,6 +28,8 @@ Tauri 2.0（Rust）と SvelteKit で構築された、ビデオダウンロー�
 - 4つのカラーテーマ（Dark、Violet、Red、Light）
 - クロスプラットフォーム対応（Windows、macOS、Linux）
 
+> **💡 ヒント:** アプリは初回起動時に yt-dlp、FFmpeg、Deno を自動的にダウンロードします。ただし、自動管理されるバイナリ（PyInstaller パッケージ）は初回起動が遅くなる場合があります。**大幅に高速な**メタデータ取得とダウンロードのため、システムのパッケージマネージャーで事前にインストールすることをお勧めします — macOS は [Homebrew](https://brew.sh/)（`brew install yt-dlp ffmpeg`）、Windows は [winget](https://learn.microsoft.com/windows/package-manager/winget/)（`winget install yt-dlp.yt-dlp ffmpeg`）、Linux は `apt`/`pacman`。アプリは自動的にシステム PATH のバージョンを検出して優先使用します。
+
 ## ソースからビルド
 
 ### 前提条件

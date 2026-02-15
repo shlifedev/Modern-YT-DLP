@@ -29,6 +29,8 @@ Built with Tauri 2.0 (Rust) and SvelteKit, providing a clean and intuitive inter
 - 4 color themes (Dark, Violet, Red, Light)
 - Cross-platform support (Windows, macOS, Linux)
 
+> **💡 Tip:** The app automatically downloads yt-dlp, FFmpeg, and Deno on first launch. However, these auto-managed binaries (PyInstaller-packaged) can be slow on initial startup. For **significantly faster** metadata fetching and downloads, pre-install them via your system package manager — [Homebrew](https://brew.sh/) on macOS (`brew install yt-dlp ffmpeg`), [winget](https://learn.microsoft.com/windows/package-manager/winget/) on Windows (`winget install yt-dlp.yt-dlp ffmpeg`), or `apt`/`pacman` on Linux. The app will automatically detect and prefer the system-installed versions from your PATH.
+
 ## Build from Source
 
 ### Prerequisites

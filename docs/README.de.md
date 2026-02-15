@@ -28,6 +28,8 @@ Gebaut mit Tauri 2.0 (Rust) und SvelteKit, bietet eine saubere und intuitive Ben
 - 4 Farbthemen (Dark, Violet, Red, Light)
 - Plattformübergreifende Unterstützung (Windows, macOS, Linux)
 
+> **💡 Tipp:** Die App lädt yt-dlp, FFmpeg und Deno beim ersten Start automatisch herunter. Allerdings können die automatisch verwalteten Binärdateien (mit PyInstaller gepackt) beim ersten Start langsam sein. Für **deutlich schnellere** Metadaten-Abfragen und Downloads installieren Sie diese vorab über Ihren Paketmanager — [Homebrew](https://brew.sh/) auf macOS (`brew install yt-dlp ffmpeg`), [winget](https://learn.microsoft.com/windows/package-manager/winget/) auf Windows (`winget install yt-dlp.yt-dlp ffmpeg`), oder `apt`/`pacman` auf Linux. Die App erkennt und bevorzugt automatisch die im System-PATH installierten Versionen.
+
 ## Aus dem Quellcode bauen
 
 ### Voraussetzungen
