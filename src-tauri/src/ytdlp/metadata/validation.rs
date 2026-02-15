@@ -30,6 +30,18 @@ static CHANNEL_PATTERNS: Lazy<Vec<Regex>> = Lazy::new(|| {
 #[tauri::command]
 #[specta::specta]
 pub fn validate_url(url: String) -> Result<UrlValidation, AppError> {
+    // Basic security validation (scheme, SSRF protection)
+    let url = match crate::ytdlp::security::sanitize_url(&url) {
+        Ok(u) => u,
+        Err(_) => {
+            return Ok(UrlValidation {
+                valid: false,
+                url_type: UrlType::Unknown,
+                normalized_url: None,
+                video_id: None,
+            });
+        }
+    };
     let url = url.trim();
 
     // Check for video URLs

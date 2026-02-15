@@ -167,7 +167,9 @@ pub async fn fetch_playlist_info(
         cmd.arg("-I").arg(format!("{}:{}", start, end));
     }
     if let Some(browser) = &settings.cookie_browser {
-        cmd.arg("--cookies-from-browser").arg(browser);
+        if security::sanitize_cookie_browser(browser).is_ok() {
+            cmd.arg("--cookies-from-browser").arg(browser);
+        }
     }
     cmd.arg(&url);
 

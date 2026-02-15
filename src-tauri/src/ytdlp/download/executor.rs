@@ -10,6 +10,8 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 const STDERR_BUFFER_LIMIT_BYTES: usize = 64 * 1024;
 const KILL_TIMEOUT: Duration = Duration::from_secs(5);
+/// Maximum duration for a single download (6 hours)
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
 
 /// Kill a child process and all its descendants (e.g., ffmpeg spawned by yt-dlp).
 /// On Windows, uses `taskkill /F /T /PID` to kill the entire process tree.
@@ -378,7 +380,7 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
         output
     });
 
-    // Wait for process with cancel support via tokio::select!
+    // Wait for process with cancel support and overall timeout via tokio::select!
     let status = tokio::select! {
         result = child.wait() => {
             match result {
@@ -391,6 +393,23 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
                     return;
                 }
             }
+        }
+        _ = tokio::time::sleep(DOWNLOAD_TIMEOUT) => {
+            // Download timeout reached - kill the process
+            logger::error_cat(
+                "download",
+                &format!("[download:{}] timed out after {:?}", task_id, DOWNLOAD_TIMEOUT),
+            );
+            kill_process_tree(&mut child).await;
+            let _ = stdout_handle.await;
+            let _ = stderr_handle.await;
+            let error_msg = "다운로드 시간이 초과되었습니다 (최대 6시간).";
+            let _ = db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(error_msg));
+            emit_download_error(&app, task_id, error_msg.to_string());
+            manager.unregister_cancel(task_id);
+            manager.release();
+            process_next_pending(app);
+            return;
         }
         _ = cancel_rx.changed() => {
             // Cancel signal received - kill the yt-dlp process and its children (e.g., ffmpeg)
