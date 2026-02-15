@@ -68,8 +68,14 @@
   let updateDownloaded = $state(0)
   let updateReady = $state(false)
 
+  // Welcome (first-run) state
+  let setupCompleted = $state<boolean | null>(null) // null = loading
+  let selectedDepMode = $state<"external" | "system" | null>(null)
+
   // Debug command menu state (F9)
   let showDebugCmd = $state(false)
+  let resetConfirming = $state(false)
+  let resetting = $state(false)
   let debugCmdResults = $state<Record<string, { status: "idle" | "loading" | "success" | "error", message: string }>>({
     "yt-dlp": { status: "idle", message: "" },
     "ffmpeg": { status: "idle", message: "" },
@@ -270,19 +276,22 @@
       checkDeps() // foreground: show spinner until done
     }
 
-    // Initialize i18n and theme from saved settings
+    // Initialize i18n, theme, and check setup status from saved settings
     try {
       const settingsResult = await commands.getSettings()
       if (settingsResult.status === "ok") {
         await initLocale(settingsResult.data.language)
         initTheme(settingsResult.data.theme)
+        setupCompleted = settingsResult.data.setupCompleted
       } else {
         await initLocale()
         initTheme()
+        setupCompleted = false
       }
     } catch (e) {
       await initLocale()
       initTheme()
+      setupCompleted = false
     }
 
     try {
@@ -532,6 +541,38 @@
     }
   }
 
+  async function handleWelcomeComplete() {
+    if (!selectedDepMode) return
+    try {
+      const settingsResult = await commands.getSettings()
+      if (settingsResult.status === "ok") {
+        const updated = { ...settingsResult.data, depMode: selectedDepMode, setupCompleted: true }
+        await commands.updateSettings(updated)
+      }
+    } catch (e) {
+      console.error("Failed to save welcome settings:", e)
+    }
+    setupCompleted = true
+    // Trigger dep check after mode selection
+    await checkDeps(true)
+  }
+
+  async function handleFactoryReset() {
+    resetting = true
+    try {
+      await commands.resetAllData()
+    } catch (e) {
+      console.error("Reset failed:", e)
+    }
+    // Relaunch the app
+    try {
+      await relaunch()
+    } catch {
+      // If relaunch fails, just reload the page
+      window.location.reload()
+    }
+  }
+
   let platformCommands = $derived(installCommands[currentPlatform] || installCommands.macos)
 
   let copiedCmdTimeout: ReturnType<typeof setTimeout> | null = null
@@ -642,7 +683,92 @@
     <!-- Window Drag Region (Top Bar) -->
     <div data-tauri-drag-region class="h-10 shrink-0 w-full"></div>
 
-    {#if checking}
+    {#if setupCompleted === null}
+      <!-- Loading settings... -->
+      <div class="flex-1 flex items-center justify-center">
+        <div class="flex flex-col items-center gap-3">
+          <span class="material-symbols-outlined text-yt-primary text-4xl animate-spin">progress_activity</span>
+        </div>
+      </div>
+    {:else if setupCompleted === false}
+      <!-- Welcome / First-run Setup -->
+      <div class="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+        <div class="max-w-lg w-full flex flex-col items-center gap-8 animate-scale-in">
+          <!-- Logo & Title -->
+          <div class="flex flex-col items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl bg-yt-primary flex items-center justify-center text-white shadow-lg shadow-yt-primary/30">
+              <span class="material-symbols-outlined text-4xl">download</span>
+            </div>
+            <div class="text-center space-y-2">
+              <h1 class="font-display text-2xl font-bold text-yt-text">{t("welcome.title")}</h1>
+              <p class="text-sm text-yt-text-secondary">{t("welcome.subtitle")}</p>
+            </div>
+          </div>
+
+          <!-- Mode Selection Cards -->
+          <div class="w-full space-y-3">
+            <!-- App Managed -->
+            <button
+              onclick={() => selectedDepMode = "external"}
+              class="w-full text-left p-4 rounded-xl border-2 transition-all {selectedDepMode === 'external'
+                ? 'border-yt-primary bg-yt-primary/5 ring-1 ring-yt-primary/20'
+                : 'border-yt-border bg-yt-surface hover:border-yt-text-secondary/30'}"
+            >
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center {selectedDepMode === 'external' ? 'bg-yt-primary text-white' : 'bg-yt-highlight text-yt-text-secondary'}">
+                  <span class="material-symbols-outlined text-xl">package_2</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-sm text-yt-text">{t("welcome.appManaged")}</span>
+                    <span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-yt-primary/15 text-yt-primary">{t("welcome.appManagedTag")}</span>
+                  </div>
+                  <p class="text-xs text-yt-text-secondary mt-1 leading-relaxed">{t("welcome.appManagedDesc")}</p>
+                </div>
+                <div class="w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center {selectedDepMode === 'external' ? 'border-yt-primary' : 'border-yt-border'}">
+                  {#if selectedDepMode === "external"}
+                    <div class="w-2.5 h-2.5 rounded-full bg-yt-primary"></div>
+                  {/if}
+                </div>
+              </div>
+            </button>
+
+            <!-- System PATH -->
+            <button
+              onclick={() => selectedDepMode = "system"}
+              class="w-full text-left p-4 rounded-xl border-2 transition-all {selectedDepMode === 'system'
+                ? 'border-yt-primary bg-yt-primary/5 ring-1 ring-yt-primary/20'
+                : 'border-yt-border bg-yt-surface hover:border-yt-text-secondary/30'}"
+            >
+              <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center {selectedDepMode === 'system' ? 'bg-yt-primary text-white' : 'bg-yt-highlight text-yt-text-secondary'}">
+                  <span class="material-symbols-outlined text-xl">terminal</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <span class="font-semibold text-sm text-yt-text">{t("welcome.systemPath")}</span>
+                  <p class="text-xs text-yt-text-secondary mt-1 leading-relaxed">{t("welcome.systemPathDesc")}</p>
+                </div>
+                <div class="w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center {selectedDepMode === 'system' ? 'border-yt-primary' : 'border-yt-border'}">
+                  {#if selectedDepMode === "system"}
+                    <div class="w-2.5 h-2.5 rounded-full bg-yt-primary"></div>
+                  {/if}
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Start Button -->
+          <button
+            onclick={handleWelcomeComplete}
+            disabled={!selectedDepMode}
+            class="w-full py-3 rounded-xl bg-yt-primary hover:bg-yt-primary-hover text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            {t("welcome.start")}
+          </button>
+        </div>
+      </div>
+    {:else if checking}
       <div class="flex-1 flex items-center justify-center">
         <div class="flex flex-col items-center gap-3">
           <span class="material-symbols-outlined text-yt-primary text-4xl animate-spin">progress_activity</span>
@@ -1107,6 +1233,48 @@
               {/if}
             </div>
           {/if}
+        </div>
+
+        <!-- Factory Reset Section -->
+        <div class="px-5 pb-4">
+          <div class="border-t border-yt-border pt-4 mt-0">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-symbols-outlined text-red-400 text-base">warning</span>
+              <h4 class="text-xs font-semibold text-red-400 uppercase tracking-wider">{t("debug.resetAll")}</h4>
+            </div>
+            <p class="text-[11px] text-yt-text-secondary mb-3">{t("debug.resetAllDesc")}</p>
+            {#if !resetConfirming}
+              <button
+                onclick={() => resetConfirming = true}
+                class="w-full py-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 text-xs font-semibold transition-colors border border-red-500/20"
+              >
+                {t("debug.resetAll")}
+              </button>
+            {:else if resetting}
+              <button disabled class="w-full py-2 rounded-lg bg-red-500/15 text-red-400 text-xs font-semibold opacity-60 cursor-not-allowed flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                {t("debug.resetting")}
+              </button>
+            {:else}
+              <div class="space-y-2">
+                <p class="text-[11px] text-red-400 font-medium">{t("debug.resetConfirm")}</p>
+                <div class="flex gap-2">
+                  <button
+                    onclick={() => resetConfirming = false}
+                    class="flex-1 py-2 rounded-lg bg-yt-highlight hover:bg-yt-border text-yt-text text-xs font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onclick={handleFactoryReset}
+                    class="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
+                  >
+                    {t("debug.resetAll")}
+                  </button>
+                </div>
+              </div>
+            {/if}
+          </div>
         </div>
 
         <div class="px-5 py-3 border-t border-yt-border bg-yt-bg/50">

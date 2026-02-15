@@ -41,6 +41,24 @@ const zhTW: Record<string, string> = {
   "layout.extracting": "解壓中...",
   "layout.verifying": "驗證中...",
 
+  // Welcome (first-run)
+  "welcome.title": "歡迎使用 Modern YT-DLP",
+  "welcome.subtitle": "選擇如何管理依賴項（yt-dlp、ffmpeg、deno）",
+  "welcome.appManaged": "應用程式管理",
+  "welcome.appManagedTag": "推薦",
+  "welcome.appManagedDesc": "應用程式自動下載並管理所有必需的工具。無需手動設定。",
+  "welcome.systemPath": "系統 PATH",
+  "welcome.systemPathDesc": "使用系統已安裝的工具。您需要手動安裝 yt-dlp、ffmpeg 和 deno。",
+  "welcome.start": "開始使用",
+  "welcome.selectMode": "請選擇一種模式",
+
+  // Debug (F9)
+  "debug.resetAll": "恢復原廠設定",
+  "debug.resetAllDesc": "刪除所有設定、應用程式管理的二進位檔案、下載紀錄和快取。應用程式將重新啟動。",
+  "debug.resetConfirm": "確定嗎？這將刪除所有應用程式資料並重新啟動。",
+  "debug.resetting": "重置中...",
+  "debug.resetDone": "重置完成。正在重新啟動...",
+
   "download.invalidUrl": "無效的YouTube URL",
   "download.alreadyInQueue": "此影片已在下載佇列中。",
   "download.analyzing": "正在取得中繼資料...",

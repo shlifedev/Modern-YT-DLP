@@ -232,7 +232,10 @@ pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, 
         })
         .collect();
 
-    logger::info_cat("metadata", &format!("Video info fetched: {} ({})", title, video_id));
+    logger::info_cat(
+        "metadata",
+        &format!("Video info fetched: {} ({})", title, video_id),
+    );
 
     Ok(VideoInfo {
         url: webpage_url,
@@ -257,7 +260,10 @@ pub async fn fetch_playlist_info(
     page: u32,
     page_size: u32,
 ) -> Result<PlaylistResult, AppError> {
-    logger::info_cat("metadata", &format!("Fetching playlist info: {} (page {})", url, page));
+    logger::info_cat(
+        "metadata",
+        &format!("Fetching playlist info: {} (page {})", url, page),
+    );
     let ytdlp_path = binary::resolve_ytdlp_path_with_app(&app).await?;
     let settings = super::settings::get_settings(&app).unwrap_or_default();
 
@@ -471,12 +477,18 @@ pub async fn fetch_playlist_info(
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_quick_metadata(url: String) -> Result<QuickMetadata, AppError> {
-    logger::info_cat("metadata", &format!("Fetching quick metadata (oEmbed): {}", url));
+    logger::info_cat(
+        "metadata",
+        &format!("Fetching quick metadata (oEmbed): {}", url),
+    );
 
     // Extract video_id from url
     let video_id = VIDEO_PATTERNS
         .iter()
-        .find_map(|p| p.captures(&url).and_then(|c| c.get(1).map(|m| m.as_str().to_string())))
+        .find_map(|p| {
+            p.captures(&url)
+                .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+        })
         .ok_or_else(|| AppError::InvalidUrl("Could not extract video ID".to_string()))?;
 
     let oembed_url = format!(
@@ -507,18 +519,9 @@ pub async fn fetch_quick_metadata(url: String) -> Result<QuickMetadata, AppError
         .await
         .map_err(|e| AppError::MetadataError(format!("Failed to parse oEmbed JSON: {}", e)))?;
 
-    let title = json["title"]
-        .as_str()
-        .unwrap_or("Unknown")
-        .to_string();
-    let channel = json["author_name"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
-    let channel_url = json["author_url"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
+    let title = json["title"].as_str().unwrap_or("Unknown").to_string();
+    let channel = json["author_name"].as_str().unwrap_or("").to_string();
+    let channel_url = json["author_url"].as_str().unwrap_or("").to_string();
 
     // Use high-quality thumbnail from YouTube
     let thumbnail = format!("https://i.ytimg.com/vi/{}/hqdefault.jpg", video_id);

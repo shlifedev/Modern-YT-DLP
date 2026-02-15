@@ -232,13 +232,10 @@ impl LogDatabase {
         let mut total_deleted = 0u64;
 
         // Delete by age
-        let cutoff = chrono::Utc::now().timestamp_millis()
-            - (max_age_days as i64 * 24 * 60 * 60 * 1000);
+        let cutoff =
+            chrono::Utc::now().timestamp_millis() - (max_age_days as i64 * 24 * 60 * 60 * 1000);
         let deleted = conn
-            .execute(
-                "DELETE FROM logs WHERE timestamp < ?1",
-                params![cutoff],
-            )
+            .execute("DELETE FROM logs WHERE timestamp < ?1", params![cutoff])
             .map_err(|e| AppError::DatabaseError(e.to_string()))?;
         total_deleted += deleted as u64;
 

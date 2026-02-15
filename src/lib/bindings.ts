@@ -269,6 +269,17 @@ async deleteAppManagedDep(depName: string) : Promise<Result<string, AppError>> {
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Full factory reset: delete settings, app-managed binaries, databases, and caches.
+ */
+async resetAllData() : Promise<Result<string[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("reset_all_data") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getLogs(page: number, pageSize: number, level: string | null, category: string | null, search: string | null, since: number | null) : Promise<Result<LogQueryResult, AppError>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_logs", { page, pageSize, level, category, search, since }) };
@@ -319,7 +330,11 @@ export type AppSettings = { downloadPath: string; defaultQuality: string; maxCon
 /**
  * Dependency resolution mode: "external" (app-managed) or "system" (system PATH only)
  */
-depMode: string }
+depMode: string; 
+/**
+ * Whether the initial setup wizard has been completed
+ */
+setupCompleted: boolean }
 export type DepInfo = { installed: boolean; version: string | null; source: DepSource; path: string | null }
 export type DepInstallEvent = { depName: string; stage: DepInstallStage; percent: number; bytesDownloaded: number; bytesTotal: number | null; message: string | null }
 export type DepInstallStage = "Downloading" | "Verifying" | "Extracting" | "Completing" | "Failed"

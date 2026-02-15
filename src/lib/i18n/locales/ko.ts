@@ -41,6 +41,24 @@ const ko: Record<string, string> = {
   "layout.extracting": "압축 해제 중...",
   "layout.verifying": "검증 중...",
 
+  // Welcome (first-run)
+  "welcome.title": "Modern YT-DLP에 오신 것을 환영합니다",
+  "welcome.subtitle": "의존성(yt-dlp, ffmpeg, deno) 관리 방식을 선택하세요",
+  "welcome.appManaged": "앱 관리",
+  "welcome.appManagedTag": "권장",
+  "welcome.appManagedDesc": "앱이 필요한 도구를 자동으로 다운로드하고 관리합니다. 별도 설정이 필요 없습니다.",
+  "welcome.systemPath": "System PATH",
+  "welcome.systemPathDesc": "시스템에 이미 설치된 도구를 사용합니다. yt-dlp, ffmpeg, deno를 직접 설치해야 합니다.",
+  "welcome.start": "시작하기",
+  "welcome.selectMode": "모드를 선택해주세요",
+
+  // Debug (F9)
+  "debug.resetAll": "공장 초기화",
+  "debug.resetAllDesc": "모든 설정, 앱 관리 바이너리, 다운로드 기록, 캐시를 삭제합니다. 앱이 재시작됩니다.",
+  "debug.resetConfirm": "정말로 초기화하시겠습니까? 모든 앱 데이터가 삭제되고 재시작됩니다.",
+  "debug.resetting": "초기화 중...",
+  "debug.resetDone": "초기화 완료. 재시작 중...",
+
   "download.invalidUrl": "유효하지 않은 YouTube URL입니다",
   "download.alreadyInQueue": "이미 다운로드 큐에 있는 영상입니다.",
   "download.analyzing": "메타데이터를 조회하는 중...",

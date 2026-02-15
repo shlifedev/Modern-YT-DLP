@@ -212,7 +212,10 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
                     })
                     .await;
                     if let Err(e) = result {
-                        logger::error_cat("download", &format!("[download:{}] task panicked: {:?}", task_id, e));
+                        logger::error_cat(
+                            "download",
+                            &format!("[download:{}] task panicked: {:?}", task_id, e),
+                        );
                         let manager = app_panic_guard.state::<Arc<DownloadManager>>();
                         manager.release();
                         process_next_pending(app_panic_guard);
@@ -220,10 +223,13 @@ pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u6
                 });
             }
             Err(e) => {
-                logger::error_cat("download", &format!(
-                    "[download:{}] failed to update status to downloading: {}",
-                    task_id, e
-                ));
+                logger::error_cat(
+                    "download",
+                    &format!(
+                        "[download:{}] failed to update status to downloading: {}",
+                        task_id, e
+                    ),
+                );
                 manager.release();
             }
         }
@@ -252,7 +258,10 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let task = match db_state.get_download(task_id) {
         Ok(Some(t)) => t,
         _ => {
-            logger::error_cat("download", &format!("[download:{}] task not found in DB", task_id));
+            logger::error_cat(
+                "download",
+                &format!("[download:{}] task not found in DB", task_id),
+            );
             manager.release();
             process_next_pending(app);
             return;
@@ -270,7 +279,10 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         Ok(p) => p,
         Err(_e) => {
             let error_msg = "yt-dlp not found. Please install via Homebrew or click Install.";
-            logger::error_cat("download", &format!("[download:{}] yt-dlp not found: {}", task_id, _e));
+            logger::error_cat(
+                "download",
+                &format!("[download:{}] yt-dlp not found: {}", task_id, _e),
+            );
             let _ =
                 db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(error_msg));
             emit_download_error(&app, task_id, "yt-dlp not found".to_string());
@@ -283,10 +295,10 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     let settings = match settings::get_settings(&app) {
         Ok(s) => s,
         Err(e) => {
-            logger::error_cat("download", &format!(
-                "[download:{}] failed to get settings: {}",
-                task_id, e
-            ));
+            logger::error_cat(
+                "download",
+                &format!("[download:{}] failed to get settings: {}", task_id, e),
+            );
             manager.release();
             process_next_pending(app);
             return;
@@ -347,10 +359,10 @@ async fn execute_download(app: AppHandle, task_id: u64) {
     args.push(task.video_url.clone());
 
     // Log the full command before spawning
-    logger::info_cat("download", &format!(
-        "[download:{}] spawning: {} {:?}",
-        task_id, ytdlp_path, args
-    ));
+    logger::info_cat(
+        "download",
+        &format!("[download:{}] spawning: {} {:?}", task_id, ytdlp_path, args),
+    );
 
     // Build command with augmented PATH including app bin dir
     let mut cmd = binary::command_with_path_app(&ytdlp_path, &app);
@@ -547,12 +559,18 @@ async fn execute_download(app: AppHandle, task_id: u64) {
 
     // Log process exit for debugging
     let exit_code = status.code();
-    logger::info_cat("download", &format!(
-        "[download:{}] process exited with code: {:?}",
-        task_id, exit_code
-    ));
+    logger::info_cat(
+        "download",
+        &format!(
+            "[download:{}] process exited with code: {:?}",
+            task_id, exit_code
+        ),
+    );
     if !stderr_output.is_empty() {
-        logger::warn_cat("download", &format!("[download:{}] stderr: {}", task_id, stderr_output));
+        logger::warn_cat(
+            "download",
+            &format!("[download:{}] stderr: {}", task_id, stderr_output),
+        );
     }
 
     if status.success() {
@@ -579,18 +597,24 @@ async fn execute_download(app: AppHandle, task_id: u64) {
         };
 
         if let Err(e) = db_state.complete_and_record(task_id, completed_at, &history_item) {
-            logger::error_cat("download", &format!(
-                "[download:{}] failed to complete_and_record: {}",
-                task_id, e
-            ));
+            logger::error_cat(
+                "download",
+                &format!(
+                    "[download:{}] failed to complete_and_record: {}",
+                    task_id, e
+                ),
+            );
             // Fallback: at least mark the download as completed
             let _ = db_state.mark_completed(task_id, completed_at);
         }
 
-        logger::info_cat("download", &format!(
-            "[download:{}] completed successfully, file_size={}",
-            task_id, file_size
-        ));
+        logger::info_cat(
+            "download",
+            &format!(
+                "[download:{}] completed successfully, file_size={}",
+                task_id, file_size
+            ),
+        );
 
         // Send completion event
         let _ = app.emit(
@@ -664,7 +688,10 @@ async fn execute_download(app: AppHandle, task_id: u64) {
             )
         };
 
-        logger::error_cat("download", &format!("[download:{}] failed: {}", task_id, error_message));
+        logger::error_cat(
+            "download",
+            &format!("[download:{}] failed: {}", task_id, error_message),
+        );
         let _ =
             db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_message));
         emit_download_error(&app, task_id, error_message);
@@ -699,7 +726,10 @@ fn process_next_pending(app: AppHandle) {
                     })
                     .await;
                     if let Err(e) = result {
-                        logger::error_cat("download", &format!("[download:{}] task panicked: {:?}", task_id, e));
+                        logger::error_cat(
+                            "download",
+                            &format!("[download:{}] task panicked: {:?}", task_id, e),
+                        );
                         let manager = app_panic_guard.state::<Arc<DownloadManager>>();
                         manager.release();
                         process_next_pending(app_panic_guard);

@@ -72,7 +72,10 @@ fn write_log_with_category(level: &str, category: &str, message: &str, details: 
 
         eprint!("{}", log_entry);
     } else {
-        eprintln!("[Logger] Not initialized: [{}] [{}] {}", level, category, message);
+        eprintln!(
+            "[Logger] Not initialized: [{}] [{}] {}",
+            level, category, message
+        );
     }
 
     // 2. DB logging
@@ -89,10 +92,7 @@ fn write_log_with_category(level: &str, category: &str, message: &str, details: 
                     message: message.to_string(),
                     details: details.map(|s| s.to_string()),
                 };
-                let _ = app.emit(
-                    "new-log-event",
-                    crate::ytdlp::types::NewLogEvent { entry },
-                );
+                let _ = app.emit("new-log-event", crate::ytdlp::types::NewLogEvent { entry });
             }
         }
     }

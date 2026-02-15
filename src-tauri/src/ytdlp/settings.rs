@@ -65,6 +65,10 @@ fn parse_settings(getter: impl Fn(&str) -> Option<serde_json::Value>) -> AppSett
         .and_then(|v| v.as_str().map(String::from))
         .unwrap_or_else(|| defaults.dep_mode.clone());
 
+    let setup_completed = getter("setupCompleted")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(defaults.setup_completed);
+
     AppSettings {
         download_path,
         default_quality,
@@ -80,6 +84,7 @@ fn parse_settings(getter: impl Fn(&str) -> Option<serde_json::Value>) -> AppSett
         theme,
         minimize_to_tray,
         dep_mode,
+        setup_completed,
     }
 }
 
@@ -175,6 +180,12 @@ pub fn update_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), Ap
     store.set(
         "depMode",
         serde_json::to_value(&settings.dep_mode).map_err(|e| AppError::Custom(e.to_string()))?,
+    );
+
+    store.set(
+        "setupCompleted",
+        serde_json::to_value(settings.setup_completed)
+            .map_err(|e| AppError::Custom(e.to_string()))?,
     );
 
     store.save().map_err(|e| AppError::Custom(e.to_string()))?;

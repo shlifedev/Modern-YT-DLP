@@ -33,10 +33,7 @@ pub async fn get_log_stats(app: AppHandle) -> Result<LogStats, AppError> {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn clear_logs(
-    app: AppHandle,
-    before_timestamp: Option<i64>,
-) -> Result<u64, AppError> {
+pub async fn clear_logs(app: AppHandle, before_timestamp: Option<i64>) -> Result<u64, AppError> {
     let log_db = app.state::<crate::LogDbState>();
     log_db.clear_logs(before_timestamp)
 }

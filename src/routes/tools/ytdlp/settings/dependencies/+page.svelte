@@ -20,6 +20,7 @@
     theme: null as string | null,
     minimizeToTray: null as boolean | null,
     depMode: "external",
+    setupCompleted: true,
   })
 
   let loading = $state(true)

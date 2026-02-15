@@ -41,6 +41,24 @@ const zhCN: Record<string, string> = {
   "layout.extracting": "解压中...",
   "layout.verifying": "验证中...",
 
+  // Welcome (first-run)
+  "welcome.title": "欢迎使用 Modern YT-DLP",
+  "welcome.subtitle": "选择如何管理依赖项（yt-dlp、ffmpeg、deno）",
+  "welcome.appManaged": "应用管理",
+  "welcome.appManagedTag": "推荐",
+  "welcome.appManagedDesc": "应用自动下载并管理所有必需的工具。无需手动设置。",
+  "welcome.systemPath": "系统 PATH",
+  "welcome.systemPathDesc": "使用系统已安装的工具。您需要手动安装 yt-dlp、ffmpeg 和 deno。",
+  "welcome.start": "开始使用",
+  "welcome.selectMode": "请选择一种模式",
+
+  // Debug (F9)
+  "debug.resetAll": "恢复出厂设置",
+  "debug.resetAllDesc": "删除所有设置、应用管理的二进制文件、下载历史和缓存。应用将重启。",
+  "debug.resetConfirm": "确定吗？这将删除所有应用数据并重启。",
+  "debug.resetting": "重置中...",
+  "debug.resetDone": "重置完成。正在重启...",
+
   "download.invalidUrl": "无效的YouTube URL",
   "download.alreadyInQueue": "该视频已在下载队列中。",
   "download.analyzing": "正在获取元数据...",

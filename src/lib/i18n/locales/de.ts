@@ -41,6 +41,24 @@ const de: Record<string, string> = {
   "layout.extracting": "Wird entpackt...",
   "layout.verifying": "Wird verifiziert...",
 
+  // Welcome (first-run)
+  "welcome.title": "Willkommen bei Modern YT-DLP",
+  "welcome.subtitle": "Wählen Sie, wie Abhängigkeiten (yt-dlp, ffmpeg, deno) verwaltet werden sollen",
+  "welcome.appManaged": "App-verwaltet",
+  "welcome.appManagedTag": "Empfohlen",
+  "welcome.appManagedDesc": "Die App lädt automatisch alle erforderlichen Tools herunter und verwaltet sie. Keine manuelle Einrichtung erforderlich.",
+  "welcome.systemPath": "System-PATH",
+  "welcome.systemPathDesc": "Verwendet bereits auf Ihrem System installierte Tools. Sie müssen yt-dlp, ffmpeg und deno manuell installieren.",
+  "welcome.start": "Los geht's",
+  "welcome.selectMode": "Bitte wählen Sie einen Modus",
+
+  // Debug (F9)
+  "debug.resetAll": "Werkseinstellungen",
+  "debug.resetAllDesc": "Löscht alle Einstellungen, app-verwaltete Binärdateien, Download-Verlauf und Caches. Die App wird neu gestartet.",
+  "debug.resetConfirm": "Sind Sie sicher? Dies löscht alle App-Daten und startet neu.",
+  "debug.resetting": "Wird zurückgesetzt...",
+  "debug.resetDone": "Zurücksetzen abgeschlossen. Neustart...",
+
   "download.invalidUrl": "Ungültige YouTube-URL",
   "download.alreadyInQueue": "Dieses Video befindet sich bereits in der Warteschlange.",
   "download.analyzing": "Metadaten werden abgerufen...",

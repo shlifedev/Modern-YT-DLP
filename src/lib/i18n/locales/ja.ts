@@ -41,6 +41,24 @@ const ja: Record<string, string> = {
   "layout.extracting": "展開中...",
   "layout.verifying": "検証中...",
 
+  // Welcome (first-run)
+  "welcome.title": "Modern YT-DLPへようこそ",
+  "welcome.subtitle": "依存関係（yt-dlp、ffmpeg、deno）の管理方法を選択してください",
+  "welcome.appManaged": "アプリ管理",
+  "welcome.appManagedTag": "推奨",
+  "welcome.appManagedDesc": "アプリが必要なツールを自動的にダウンロード・管理します。手動セットアップは不要です。",
+  "welcome.systemPath": "システムPATH",
+  "welcome.systemPathDesc": "システムにインストール済みのツールを使用します。yt-dlp、ffmpeg、denoを手動でインストールする必要があります。",
+  "welcome.start": "はじめる",
+  "welcome.selectMode": "モードを選択してください",
+
+  // Debug (F9)
+  "debug.resetAll": "工場出荷状態に戻す",
+  "debug.resetAllDesc": "すべての設定、アプリ管理のバイナリ、ダウンロード履歴、キャッシュを削除します。アプリは再起動されます。",
+  "debug.resetConfirm": "本当によろしいですか？すべてのアプリデータが削除され、再起動されます。",
+  "debug.resetting": "リセット中...",
+  "debug.resetDone": "リセット完了。再起動中...",
+
   "download.invalidUrl": "無効なYouTube URLです",
   "download.alreadyInQueue": "この動画はすでにダウンロードキューにあります。",
   "download.analyzing": "メタデータを取得中...",

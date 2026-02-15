@@ -57,6 +57,7 @@ pub fn run() {
             ytdlp::commands::check_dependency_update,
             ytdlp::commands::update_dependency,
             ytdlp::commands::delete_app_managed_dep,
+            ytdlp::commands::reset_all_data,
             modules::log_commands::get_logs,
             modules::log_commands::get_log_stats,
             modules::log_commands::clear_logs,
@@ -118,10 +119,10 @@ pub fn run() {
             // Reset stale downloads left in 'downloading' state from previous session
             if let Ok(count) = db.reset_stale_downloads() {
                 if count > 0 {
-                    modules::logger::info_cat("app", &format!(
-                        "Reset {} stale downloads from previous session",
-                        count
-                    ));
+                    modules::logger::info_cat(
+                        "app",
+                        &format!("Reset {} stale downloads from previous session", count),
+                    );
                 }
             }
             app.manage(Arc::new(db));

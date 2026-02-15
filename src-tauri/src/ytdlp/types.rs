@@ -242,6 +242,8 @@ pub struct AppSettings {
     pub minimize_to_tray: Option<bool>,
     /// Dependency resolution mode: "external" (app-managed) or "system" (system PATH only)
     pub dep_mode: String,
+    /// Whether the initial setup wizard has been completed
+    pub setup_completed: bool,
 }
 
 impl Default for AppSettings {
@@ -261,6 +263,7 @@ impl Default for AppSettings {
             theme: None,
             minimize_to_tray: None,
             dep_mode: "external".to_string(),
+            setup_completed: false,
         }
     }
 }
