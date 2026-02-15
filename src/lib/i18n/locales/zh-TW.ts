@@ -1,4 +1,6 @@
 const zhTW: Record<string, string> = {
+  "nav.downloader": "下載器",
+  "nav.queueHistory": "佇列與歷史",
   "nav.settings": "設定",
   "nav.queue": "佇列",
   "nav.activeDownloads": "下載狀態",
@@ -21,6 +23,14 @@ const zhTW: Record<string, string> = {
   "layout.queued": "排隊中",
   "layout.recent": "最近完成",
   "layout.viewAll": "檢視全部",
+  "layout.downloading": "{count}個下載中...",
+  "layout.idle": "閒置",
+  "layout.recentActivity": "最近活動",
+  "layout.stopAll": "全部停止",
+  "layout.recentlyCompleted": "最近完成",
+  "layout.viewFullHistory": "查看完整歷史",
+  "layout.missing": "未安裝",
+  "layout.recommendedCommand": "推薦安裝命令",
 
   "download.invalidUrl": "無效的YouTube URL",
   "download.alreadyInQueue": "此影片已在下載佇列中。",
@@ -61,6 +71,12 @@ const zhTW: Record<string, string> = {
   "download.redownload": "重新下載",
   "download.cancel": "取消",
   "download.alreadyDownloaded": "「{title}」已經下載過。",
+  "download.error": "錯誤",
+  "download.duplicateFound": "發現重複",
+  "download.include": "包含:",
+  "download.cookie": "Cookie:",
+  "download.concurrent": "並行:",
+  "download.emptyState": "貼上URL開始下載",
 
   "queue.title": "下載",
   "queue.subtitle": "管理下載佇列",
@@ -74,6 +90,9 @@ const zhTW: Record<string, string> = {
   "queue.completedStatus": "已完成",
   "queue.failedStatus": "失敗",
   "queue.pending": "等待中",
+  "queue.downloadComplete": "下載完成",
+  "queue.failed": "失敗",
+  "queue.pendingStatus": "等待中...",
 
   "history.title": "媒體庫",
   "history.subtitle": "下載紀錄",
@@ -95,6 +114,8 @@ const zhTW: Record<string, string> = {
   "settings.saved": "已儲存！",
   "settings.language": "語言",
   "settings.theme": "佈景主題",
+  "settings.general": "一般",
+  "settings.appearance": "外觀",
 
   "theme.dark": "深色",
   "theme.red": "紅色",

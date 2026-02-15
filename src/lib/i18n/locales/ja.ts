@@ -1,4 +1,6 @@
 const ja: Record<string, string> = {
+  "nav.downloader": "ダウンローダー",
+  "nav.queueHistory": "キューと履歴",
   "nav.settings": "設定",
   "nav.queue": "キュー",
   "nav.activeDownloads": "ダウンロード状況",
@@ -21,6 +23,14 @@ const ja: Record<string, string> = {
   "layout.queued": "待機中",
   "layout.recent": "最近の完了",
   "layout.viewAll": "すべて表示",
+  "layout.downloading": "{count}件ダウンロード中...",
+  "layout.idle": "待機中",
+  "layout.recentActivity": "最近のアクティビティ",
+  "layout.stopAll": "すべて停止",
+  "layout.recentlyCompleted": "最近完了",
+  "layout.viewFullHistory": "全履歴を表示",
+  "layout.missing": "未インストール",
+  "layout.recommendedCommand": "推奨インストールコマンド",
 
   "download.invalidUrl": "無効なYouTube URLです",
   "download.alreadyInQueue": "この動画はすでにダウンロードキューにあります。",
@@ -61,6 +71,12 @@ const ja: Record<string, string> = {
   "download.redownload": "再ダウンロード",
   "download.cancel": "キャンセル",
   "download.alreadyDownloaded": "「{title}」はすでにダウンロード済みです。",
+  "download.error": "エラー",
+  "download.duplicateFound": "重複を検出",
+  "download.include": "含む:",
+  "download.cookie": "Cookie:",
+  "download.concurrent": "同時:",
+  "download.emptyState": "URLを貼り付けてダウンロードを開始",
 
   "queue.title": "ダウンロード",
   "queue.subtitle": "ダウンロードキューの管理",
@@ -74,6 +90,9 @@ const ja: Record<string, string> = {
   "queue.completedStatus": "完了",
   "queue.failedStatus": "失敗",
   "queue.pending": "待機中",
+  "queue.downloadComplete": "ダウンロード完了",
+  "queue.failed": "失敗",
+  "queue.pendingStatus": "待機中...",
 
   "history.title": "ライブラリ",
   "history.subtitle": "ダウンロード履歴",
@@ -95,6 +114,8 @@ const ja: Record<string, string> = {
   "settings.saved": "保存しました！",
   "settings.language": "言語",
   "settings.theme": "テーマ",
+  "settings.general": "一般",
+  "settings.appearance": "外観",
 
   "theme.dark": "ダーク",
   "theme.red": "レッド",

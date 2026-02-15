@@ -1,5 +1,7 @@
 const en: Record<string, string> = {
   // Nav
+  "nav.downloader": "Downloader",
+  "nav.queueHistory": "Queue & History",
   "nav.settings": "Settings",
   "nav.queue": "Queue",
   "nav.activeDownloads": "Active Downloads",
@@ -23,6 +25,14 @@ const en: Record<string, string> = {
   "layout.queued": "Queued",
   "layout.recent": "Recent",
   "layout.viewAll": "View All",
+  "layout.downloading": "{count} downloading...",
+  "layout.idle": "Idle",
+  "layout.recentActivity": "Recent Activity",
+  "layout.stopAll": "Stop All",
+  "layout.recentlyCompleted": "Recently Completed",
+  "layout.viewFullHistory": "View full history",
+  "layout.missing": "Missing",
+  "layout.recommendedCommand": "Recommended Install Command",
 
   // Download page
   "download.invalidUrl": "Invalid YouTube URL",
@@ -64,6 +74,12 @@ const en: Record<string, string> = {
   "download.redownload": "Re-download",
   "download.cancel": "Cancel",
   "download.alreadyDownloaded": "\"{title}\" has already been downloaded.",
+  "download.error": "Error",
+  "download.duplicateFound": "Duplicate Found",
+  "download.include": "Include:",
+  "download.cookie": "Cookie:",
+  "download.concurrent": "Concurrent:",
+  "download.emptyState": "Paste a URL to start downloading",
 
   // Queue page
   "queue.title": "Downloads",
@@ -78,6 +94,9 @@ const en: Record<string, string> = {
   "queue.completedStatus": "Completed",
   "queue.failedStatus": "Failed",
   "queue.pending": "Pending",
+  "queue.downloadComplete": "Download Complete",
+  "queue.failed": "Failed",
+  "queue.pendingStatus": "Pending...",
 
   // History page
   "history.title": "Library",
@@ -101,6 +120,8 @@ const en: Record<string, string> = {
   "settings.saved": "Saved!",
   "settings.language": "Language",
   "settings.theme": "Theme",
+  "settings.general": "General",
+  "settings.appearance": "Appearance",
 
   // Theme names
   "theme.dark": "Dark",

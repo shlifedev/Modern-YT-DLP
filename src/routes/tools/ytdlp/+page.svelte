@@ -679,7 +679,7 @@
         <div class="bg-yt-error/10 border border-yt-error/20 rounded-lg px-4 py-3 flex items-start gap-3">
           <span class="material-symbols-outlined text-yt-error text-[20px] shrink-0 mt-0.5">error</span>
           <div class="flex-1 min-w-0">
-             <p class="text-sm text-yt-text font-medium">Error</p>
+             <p class="text-sm text-yt-text font-medium">{t("download.error")}</p>
              <p class="text-xs text-yt-text-secondary mt-0.5">{error}</p>
           </div>
           <button class="text-yt-text-secondary hover:text-yt-text" aria-label="Close error" onclick={() => error = null}>
@@ -692,7 +692,7 @@
         <div class="bg-yt-warning/10 border border-yt-warning/20 rounded-lg px-4 py-3 flex items-start gap-3">
            <span class="material-symbols-outlined text-yt-warning text-[20px] shrink-0 mt-0.5">warning</span>
            <div class="flex-1 min-w-0">
-             <p class="text-sm text-yt-text font-medium">Duplicate Found</p>
+             <p class="text-sm text-yt-text font-medium">{t("download.duplicateFound")}</p>
              <p class="text-xs text-yt-text-secondary mt-0.5">
                {t("download.alreadyDownloaded", { title: videoInfo?.title || pendingRequest?.title || "" })}
             </p>
@@ -744,13 +744,13 @@
           {:else if playlistResult && !videoInfo}
              <span class="material-symbols-outlined text-[18px]">playlist_add</span>
              {#if selectedEntries.size > 0}
-               <span>Download ({selectedEntries.size})</span>
+               <span>{t("download.downloadSelected")} ({selectedEntries.size})</span>
              {:else}
-               <span>Download All</span>
+               <span>{t("download.downloadAll")}</span>
              {/if}
           {:else}
             <span class="material-symbols-outlined text-[18px]">download</span>
-             <span>Download</span>
+             <span>{t("download.download")}</span>
           {/if}
         </button>
       </div>
@@ -791,18 +791,18 @@
 
           <!-- Bottom Row: Filename Options -->
           <div class="flex items-center gap-4 text-xs text-yt-text-secondary border-t border-yt-border/50 pt-2 px-1 cursor-default">
-             <span class="font-medium text-yt-text-secondary w-auto shrink-0 opacity-70">Include:</span>
+             <span class="font-medium text-yt-text-secondary w-auto shrink-0 opacity-70">{t("download.include")}</span>
              <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
                 <input type="checkbox" bind:checked={templateUploaderFolder} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
-                <span>Uploader Folder</span>
+                <span>{t("download.uploaderFolder")}</span>
              </label>
              <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
                 <input type="checkbox" bind:checked={templateUploadDate} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
-                <span>Upload Date</span>
+                <span>{t("download.uploadDate")}</span>
              </label>
              <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
                 <input type="checkbox" bind:checked={templateVideoId} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
-                <span>Video ID</span>
+                <span>{t("download.videoId")}</span>
              </label>
           </div>
 
@@ -816,13 +816,13 @@
                   class="font-medium text-yt-text-secondary shrink-0 opacity-70"
                   onmouseenter={(e) => showTooltip(e, t("settings.cookieHelp"))}
                   onmouseleave={hideTooltip}
-                >Cookie:</span>
+                >{t("download.cookie")}</span>
                 <select
                   class="bg-transparent border-none p-0 text-xs text-yt-text font-medium focus:ring-0 cursor-default"
                   bind:value={cookieBrowser}
                   onchange={() => autoSaveSettings({ cookieBrowser })}
                 >
-                  <option value={null}>None</option>
+                  <option value={null}>{t("settings.none")}</option>
                   {#each browsers as browser}
                     <option value={browser}>{browser}</option>
                   {/each}
@@ -839,7 +839,7 @@
                   class="font-medium text-yt-text-secondary shrink-0 opacity-70"
                   onmouseenter={(e) => showTooltip(e, t("settings.concurrentDesc"))}
                   onmouseleave={hideTooltip}
-                >Concurrent:</span>
+                >{t("download.concurrent")}</span>
                 <input
                   type="range"
                   class="flex-1 max-w-24 accent-yt-primary h-1"
@@ -872,7 +872,7 @@
                    <div class="flex items-center gap-3 text-xs text-yt-text-muted mt-2">
                       <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">schedule</span> {formatDuration(videoInfo.duration)}</span>
                       {#if playlistResult}
-                         <button onclick={() => videoInfo = null} class="ml-auto text-yt-primary hover:underline">Back to Playlist</button>
+                         <button onclick={() => videoInfo = null} class="ml-auto text-yt-primary hover:underline">{t("download.backToPlaylist")}</button>
                       {/if}
                    </div>
                 </div>
@@ -900,7 +900,7 @@
                       class="px-2 py-1 rounded hover:bg-yt-highlight text-xs font-medium text-yt-text-secondary transition-colors"
                       onclick={toggleSelectAll}
                     >
-                      {allSelected ? "Deselect All" : "Select All"}
+                      {allSelected ? t("download.deselect") : t("download.selectAll")}
                     </button>
                  </div>
               </div>
@@ -935,7 +935,7 @@
                        
                        <!-- Info -->
                        <button class="flex-1 min-w-0 cursor-pointer text-left border-none bg-transparent p-0" onclick={() => handleSelectVideo(entry)}>
-                          <p class="text-sm text-yt-text font-medium truncate">{entry.title || "No Title"}</p>
+                          <p class="text-sm text-yt-text font-medium truncate">{entry.title || t("download.noTitle")}</p>
                           <p class="text-xs text-yt-text-secondary mt-0.5 flex items-center gap-2">
                              <span>{formatDuration(entry.duration)}</span>
                           </p>
@@ -951,7 +951,7 @@
                       onclick={handleLoadMore}
                       disabled={loadingMore}
                     >
-                      {loadingMore ? "Loading..." : "Load More Videos"}
+                      {loadingMore ? t("download.loading") : t("download.loadMore")}
                     </button>
                  </div>
               {/if}
@@ -962,7 +962,7 @@
          {#if !videoInfo && !playlistResult && !url}
             <div class="flex flex-col items-center justify-center py-20 opacity-50 select-none">
                <span class="material-symbols-outlined text-6xl text-yt-text-border mb-4">download_for_offline</span>
-               <p class="text-yt-text-secondary text-sm">Paste a URL to start downloading</p>
+               <p class="text-yt-text-secondary text-sm">{t("download.emptyState")}</p>
             </div>
          {/if}
        </div>

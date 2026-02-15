@@ -47,9 +47,9 @@
   let queueFlash = $state(false)
 
   const navItems = [
-    { href: "/tools/ytdlp", icon: "download", label: "Downloader", exact: true },
-    { href: "/tools/ytdlp/queue", icon: "toc", label: "Queue & History" }, // explicit queue page link
-    { href: "/tools/ytdlp/settings", icon: "settings", label: "Settings" },
+    { href: "/tools/ytdlp", icon: "download", labelKey: "nav.downloader", exact: true },
+    { href: "/tools/ytdlp/queue", icon: "toc", labelKey: "nav.queueHistory" }, // explicit queue page link
+    { href: "/tools/ytdlp/settings", icon: "settings", labelKey: "nav.settings" },
   ]
 
   function isActive(href: string, exact = false): boolean {
@@ -326,7 +326,7 @@
 
 <div class="flex h-screen overflow-hidden bg-yt-bg text-yt-text font-body selection:bg-yt-primary/20 selection:text-yt-text">
   <!-- Sidebar -->
-  <aside class="w-64 bg-yt-surface border-r border-yt-border flex flex-col shrink-0 z-20">
+  <aside class="w-56 bg-yt-surface border-r border-yt-border flex flex-col shrink-0 z-20">
     <!-- Window Drag Region (Mac style) -->
     <div data-tauri-drag-region class="h-8 shrink-0"></div>
 
@@ -354,7 +354,7 @@
               : 'text-yt-text-secondary hover:bg-yt-overlay hover:text-yt-text'}"
         >
           <span class="material-symbols-outlined text-[20px] {isActive(item.href, item.exact) ? 'text-yt-primary' : ''}">{item.icon}</span>
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
           {#if item.href === "/tools/ytdlp/queue" && (activeCount + pendingCount) > 0}
             <span class="absolute right-2 w-2 h-2 bg-yt-primary rounded-full ring-2 ring-yt-surface animate-pulse"></span>
           {/if}
@@ -379,9 +379,9 @@
             <span class="block text-xs font-semibold text-yt-text">{t("nav.queue")}</span>
             <span class="block text-[10px] text-yt-text-secondary">
               {#if activeCount > 0}
-                {activeCount} downloading...
+                {t("layout.downloading", { count: activeCount })}
               {:else}
-                Idle
+                {t("layout.idle")}
               {/if}
             </span>
           </div>
@@ -424,7 +424,7 @@
               <div class="min-w-0">
                 <p class="text-xs font-semibold text-yt-text">yt-dlp</p>
                 <p class="text-[10px] truncate opacity-70">
-                  {ytdlpInstalled ? ytdlpVersion : "Missing"}
+                  {ytdlpInstalled ? ytdlpVersion : t("layout.missing")}
                 </p>
               </div>
             </div>
@@ -435,7 +435,7 @@
               <div class="min-w-0">
                 <p class="text-xs font-semibold text-yt-text">ffmpeg</p>
                 <p class="text-[10px] truncate opacity-70">
-                  {ffmpegInstalled ? "Installed" : "Missing"}
+                  {ffmpegInstalled ? t("layout.installed") : t("layout.missing")}
                 </p>
               </div>
             </div>
@@ -444,7 +444,7 @@
           <div class="w-full space-y-4">
              <div>
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-xs font-medium text-yt-text">Recommended Install Command</span>
+                  <span class="text-xs font-medium text-yt-text">{t("layout.recommendedCommand")}</span>
                   <span class="text-[10px] text-yt-text-muted bg-yt-surface border border-yt-border px-1.5 py-0.5 rounded uppercase">{currentPlatform}</span>
                 </div>
                 <div class="relative group">
@@ -488,14 +488,14 @@
     <!-- Floating Popup (Anchored near bottom left sidebar) -->
     <div class="fixed bottom-16 left-4 w-80 max-h-[60vh] bg-yt-surface rounded-xl shadow-2xl ring-1 ring-black/5 z-50 flex flex-col animate-popup-in">
        <div class="p-3 border-b border-yt-border flex items-center justify-between bg-yt-surface rounded-t-xl">
-        <h3 class="font-semibold text-xs text-yt-text px-1">Recent Activity</h3>
+        <h3 class="font-semibold text-xs text-yt-text px-1">{t("layout.recentActivity")}</h3>
         <div class="flex items-center gap-1">
           {#if (activeCount + pendingCount) > 0}
             <button
               onclick={handleCancelAll}
               class="text-yt-error hover:bg-yt-error/10 text-[10px] font-medium px-2 py-1 rounded transition-colors"
             >
-              Stop All
+              {t("layout.stopAll")}
             </button>
           {/if}
         </div>
@@ -504,7 +504,7 @@
       <div class="flex-1 overflow-y-auto hide-scrollbar p-2 space-y-2">
         {#if activeDownloads.length === 0 && recentCompleted.length === 0}
            <div class="py-8 text-center">
-             <p class="text-xs text-yt-text-muted">No active downloads</p>
+             <p class="text-xs text-yt-text-muted">{t("layout.noActiveDownloads")}</p>
            </div>
         {/if}
 
@@ -524,7 +524,7 @@
 
         {#if recentCompleted.length > 0}
           <div class="pt-2">
-            <div class="text-[10px] font-semibold text-yt-text-muted uppercase tracking-wider mb-2 px-1">Recently Completed</div>
+            <div class="text-[10px] font-semibold text-yt-text-muted uppercase tracking-wider mb-2 px-1">{t("layout.recentlyCompleted")}</div>
             <div class="space-y-1">
               {#each recentCompleted as item}
                 <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-yt-highlight transition-colors">
@@ -539,7 +539,7 @@
       
        <div class="p-2 border-t border-yt-border">
         <a href="/tools/ytdlp/queue" class="flex items-center justify-center gap-1 w-full py-1.5 text-xs font-medium text-yt-text-secondary hover:text-yt-text hover:bg-yt-highlight rounded transition-colors" onclick={() => popupOpen = false}>
-          View full history
+          {t("layout.viewFullHistory")}
         </a>
       </div>
     </div>

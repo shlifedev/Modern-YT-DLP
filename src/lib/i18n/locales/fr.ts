@@ -1,4 +1,6 @@
 const fr: Record<string, string> = {
+  "nav.downloader": "Téléchargeur",
+  "nav.queueHistory": "File d'attente et historique",
   "nav.settings": "Paramètres",
   "nav.queue": "File d'attente",
   "nav.activeDownloads": "Téléchargements actifs",
@@ -21,6 +23,14 @@ const fr: Record<string, string> = {
   "layout.queued": "En attente",
   "layout.recent": "Récents",
   "layout.viewAll": "Tout voir",
+  "layout.downloading": "{count} en téléchargement...",
+  "layout.idle": "Inactif",
+  "layout.recentActivity": "Activité récente",
+  "layout.stopAll": "Tout arrêter",
+  "layout.recentlyCompleted": "Récemment terminés",
+  "layout.viewFullHistory": "Voir l'historique complet",
+  "layout.missing": "Manquant",
+  "layout.recommendedCommand": "Commande d'installation recommandée",
 
   "download.invalidUrl": "URL YouTube invalide",
   "download.alreadyInQueue": "Cette vidéo est déjà dans la file d'attente.",
@@ -61,6 +71,12 @@ const fr: Record<string, string> = {
   "download.redownload": "Retélécharger",
   "download.cancel": "Annuler",
   "download.alreadyDownloaded": "« {title} » a déjà été téléchargée.",
+  "download.error": "Erreur",
+  "download.duplicateFound": "Doublon trouvé",
+  "download.include": "Inclure :",
+  "download.cookie": "Cookie :",
+  "download.concurrent": "Simultanés :",
+  "download.emptyState": "Collez une URL pour commencer le téléchargement",
 
   "queue.title": "Téléchargements",
   "queue.subtitle": "Gérer la file d'attente",
@@ -74,6 +90,9 @@ const fr: Record<string, string> = {
   "queue.completedStatus": "Terminé",
   "queue.failedStatus": "Échoué",
   "queue.pending": "En attente",
+  "queue.downloadComplete": "Téléchargement terminé",
+  "queue.failed": "Échoué",
+  "queue.pendingStatus": "En attente...",
 
   "history.title": "Bibliothèque",
   "history.subtitle": "Historique des téléchargements",
@@ -95,6 +114,8 @@ const fr: Record<string, string> = {
   "settings.saved": "Enregistré !",
   "settings.language": "Langue",
   "settings.theme": "Thème",
+  "settings.general": "Général",
+  "settings.appearance": "Apparence",
 
   "theme.dark": "Sombre",
   "theme.red": "Rouge",

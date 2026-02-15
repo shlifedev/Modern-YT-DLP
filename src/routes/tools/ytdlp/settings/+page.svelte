@@ -22,8 +22,6 @@
   })
 
   let loading = $state(true)
-  let saving = $state(false)
-  let saved = $state(false)
 
   onMount(async () => {
     try {
@@ -33,25 +31,26 @@
     loading = false
   })
 
-  async function handleSave() {
-    saving = true; saved = false
-    try {
-      const r = await commands.updateSettings(settings)
-      if (r.status === "ok") { saved = true; setTimeout(() => saved = false, 2000) }
-    } catch (e) { console.error(e) }
-    finally { saving = false }
+  async function autoSave() {
+    try { await commands.updateSettings(settings) }
+    catch (e) { console.error("Failed to save settings:", e) }
+  }
+
+  async function handleMinimizeChange(e: Event) {
+    settings.minimizeToTray = (e.target as HTMLInputElement).checked
+    await autoSave()
   }
 
   async function handleLanguageChange(locale: string) {
     setLocale(locale)
     settings.language = locale
-    await handleSave()
+    await autoSave()
   }
 
   async function handleThemeChange(themeId: string) {
     setTheme(themeId as ThemeId)
     settings.theme = themeId
-    await handleSave()
+    await autoSave()
   }
 </script>
 
@@ -71,7 +70,7 @@
 
         <!-- General Section -->
         <section>
-          <h3 class="text-xs font-semibold text-yt-text-secondary uppercase tracking-wider mb-4 px-1">General</h3>
+          <h3 class="text-xs font-semibold text-yt-text-secondary uppercase tracking-wider mb-4 px-1">{t("settings.general")}</h3>
           <div class="bg-yt-surface border border-yt-border rounded-lg divide-y divide-yt-border/50 overflow-hidden">
              <!-- Minimize to Tray -->
              <div class="p-4 flex items-center justify-between gap-4">
@@ -80,7 +79,7 @@
                    <p class="text-xs text-yt-text-secondary">{t("settings.minimizeToTrayDesc")}</p>
                 </div>
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input id="minimize-tray" type="checkbox" checked={settings.minimizeToTray === true} onchange={(e) => settings.minimizeToTray = (e.target as HTMLInputElement).checked} class="sr-only peer" />
+                  <input id="minimize-tray" type="checkbox" checked={settings.minimizeToTray === true} onchange={handleMinimizeChange} class="sr-only peer" />
                   <div class="w-9 h-5 bg-yt-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-yt-primary"></div>
                 </label>
              </div>
@@ -89,7 +88,7 @@
 
         <!-- Appearance -->
         <section>
-          <h3 class="text-xs font-semibold text-yt-text-secondary uppercase tracking-wider mb-4 px-1">Appearance</h3>
+          <h3 class="text-xs font-semibold text-yt-text-secondary uppercase tracking-wider mb-4 px-1">{t("settings.appearance")}</h3>
           <div class="bg-yt-surface border border-yt-border rounded-lg divide-y divide-yt-border/50 overflow-hidden">
              <!-- Language -->
              <div class="p-4 flex items-center justify-between gap-4">
@@ -128,24 +127,6 @@
           </div>
         </section>
 
-        <!-- Save Action -->
-        <div class="pt-4 flex justify-end">
-           <button
-            class="px-6 py-2.5 rounded-lg bg-yt-primary hover:bg-yt-primary-hover text-white text-sm font-semibold shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
-            onclick={handleSave}
-            disabled={saving}
-          >
-            {#if saving}
-              <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
-              <span>{t("settings.saving")}</span>
-            {:else if saved}
-              <span class="material-symbols-outlined text-[18px]">check</span>
-              <span>{t("settings.saved")}</span>
-            {:else}
-              <span>{t("settings.save")}</span>
-            {/if}
-          </button>
-        </div>
       </div>
     {/if}
   </div>

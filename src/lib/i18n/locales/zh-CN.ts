@@ -1,4 +1,6 @@
 const zhCN: Record<string, string> = {
+  "nav.downloader": "下载器",
+  "nav.queueHistory": "队列与历史",
   "nav.settings": "设置",
   "nav.queue": "队列",
   "nav.activeDownloads": "下载状态",
@@ -21,6 +23,14 @@ const zhCN: Record<string, string> = {
   "layout.queued": "排队中",
   "layout.recent": "最近完成",
   "layout.viewAll": "查看全部",
+  "layout.downloading": "{count}个下载中...",
+  "layout.idle": "空闲",
+  "layout.recentActivity": "最近活动",
+  "layout.stopAll": "全部停止",
+  "layout.recentlyCompleted": "最近完成",
+  "layout.viewFullHistory": "查看完整历史",
+  "layout.missing": "未安装",
+  "layout.recommendedCommand": "推荐安装命令",
 
   "download.invalidUrl": "无效的YouTube URL",
   "download.alreadyInQueue": "该视频已在下载队列中。",
@@ -61,6 +71,12 @@ const zhCN: Record<string, string> = {
   "download.redownload": "重新下载",
   "download.cancel": "取消",
   "download.alreadyDownloaded": "「{title}」已经下载过。",
+  "download.error": "错误",
+  "download.duplicateFound": "发现重复",
+  "download.include": "包含:",
+  "download.cookie": "Cookie:",
+  "download.concurrent": "并发:",
+  "download.emptyState": "粘贴URL开始下载",
 
   "queue.title": "下载",
   "queue.subtitle": "管理下载队列",
@@ -74,6 +90,9 @@ const zhCN: Record<string, string> = {
   "queue.completedStatus": "已完成",
   "queue.failedStatus": "失败",
   "queue.pending": "等待中",
+  "queue.downloadComplete": "下载完成",
+  "queue.failed": "失败",
+  "queue.pendingStatus": "等待中...",
 
   "history.title": "媒体库",
   "history.subtitle": "下载历史",
@@ -95,6 +114,8 @@ const zhCN: Record<string, string> = {
   "settings.saved": "已保存！",
   "settings.language": "语言",
   "settings.theme": "主题",
+  "settings.general": "常规",
+  "settings.appearance": "外观",
 
   "theme.dark": "深色",
   "theme.red": "红色",

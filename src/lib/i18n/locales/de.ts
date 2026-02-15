@@ -1,4 +1,6 @@
 const de: Record<string, string> = {
+  "nav.downloader": "Downloader",
+  "nav.queueHistory": "Warteschlange & Verlauf",
   "nav.settings": "Einstellungen",
   "nav.queue": "Warteschlange",
   "nav.activeDownloads": "Aktive Downloads",
@@ -21,6 +23,14 @@ const de: Record<string, string> = {
   "layout.queued": "Wartend",
   "layout.recent": "Kürzlich",
   "layout.viewAll": "Alle anzeigen",
+  "layout.downloading": "{count} wird heruntergeladen...",
+  "layout.idle": "Inaktiv",
+  "layout.recentActivity": "Letzte Aktivität",
+  "layout.stopAll": "Alle stoppen",
+  "layout.recentlyCompleted": "Kürzlich abgeschlossen",
+  "layout.viewFullHistory": "Gesamten Verlauf anzeigen",
+  "layout.missing": "Fehlt",
+  "layout.recommendedCommand": "Empfohlener Installationsbefehl",
 
   "download.invalidUrl": "Ungültige YouTube-URL",
   "download.alreadyInQueue": "Dieses Video befindet sich bereits in der Warteschlange.",
@@ -61,6 +71,12 @@ const de: Record<string, string> = {
   "download.redownload": "Erneut herunterladen",
   "download.cancel": "Abbrechen",
   "download.alreadyDownloaded": "\u201E{title}\u201C wurde bereits heruntergeladen.",
+  "download.error": "Fehler",
+  "download.duplicateFound": "Duplikat gefunden",
+  "download.include": "Einschließen:",
+  "download.cookie": "Cookie:",
+  "download.concurrent": "Gleichzeitig:",
+  "download.emptyState": "URL einfügen, um den Download zu starten",
 
   "queue.title": "Downloads",
   "queue.subtitle": "Download-Warteschlange verwalten",
@@ -74,6 +90,9 @@ const de: Record<string, string> = {
   "queue.completedStatus": "Abgeschlossen",
   "queue.failedStatus": "Fehlgeschlagen",
   "queue.pending": "Wartend",
+  "queue.downloadComplete": "Download abgeschlossen",
+  "queue.failed": "Fehlgeschlagen",
+  "queue.pendingStatus": "Ausstehend...",
 
   "history.title": "Bibliothek",
   "history.subtitle": "Download-Verlauf",
@@ -95,6 +114,8 @@ const de: Record<string, string> = {
   "settings.saved": "Gespeichert!",
   "settings.language": "Sprache",
   "settings.theme": "Design",
+  "settings.general": "Allgemein",
+  "settings.appearance": "Erscheinungsbild",
 
   "theme.dark": "Dunkel",
   "theme.red": "Rot",

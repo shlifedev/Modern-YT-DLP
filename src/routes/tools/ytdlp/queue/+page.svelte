@@ -170,14 +170,14 @@
                         <span class="text-yt-primary font-mono">{item.speed || "0 KiB/s"}</span>
                         <span class="text-yt-text-muted">ETA: {item.eta || "--:--"}</span>
                      {:else if item.status === "completed"}
-                        <span class="text-yt-success">Download Complete</span>
+                        <span class="text-yt-success">{t("queue.downloadComplete")}</span>
                      {:else if item.status === "failed"}
                          <button class="text-yt-error hover:underline flex items-center gap-1" onclick={() => toggleError(item.id)}>
-                            {item.errorMessage ? item.errorMessage.split("\n")[0] : "Failed"}
+                            {item.errorMessage ? item.errorMessage.split("\n")[0] : t("queue.failed")}
                             <span class="material-symbols-outlined text-[14px]">expand_more</span>
                          </button>
                      {:else}
-                        <span>Pending...</span>
+                        <span>{t("queue.pendingStatus")}</span>
                      {/if}
                   </div>
                   

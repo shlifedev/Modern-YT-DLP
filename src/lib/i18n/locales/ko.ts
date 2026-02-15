@@ -1,4 +1,6 @@
 const ko: Record<string, string> = {
+  "nav.downloader": "다운로더",
+  "nav.queueHistory": "대기열 및 기록",
   "nav.settings": "설정",
   "nav.queue": "대기열",
   "nav.activeDownloads": "다운로드 현황",
@@ -21,6 +23,14 @@ const ko: Record<string, string> = {
   "layout.queued": "대기 중",
   "layout.recent": "최근 완료",
   "layout.viewAll": "전체 보기",
+  "layout.downloading": "{count}개 다운로드 중...",
+  "layout.idle": "대기 중",
+  "layout.recentActivity": "최근 활동",
+  "layout.stopAll": "모두 중지",
+  "layout.recentlyCompleted": "최근 완료",
+  "layout.viewFullHistory": "전체 기록 보기",
+  "layout.missing": "미설치",
+  "layout.recommendedCommand": "설치 명령어",
 
   "download.invalidUrl": "유효하지 않은 YouTube URL입니다",
   "download.alreadyInQueue": "이미 다운로드 큐에 있는 영상입니다.",
@@ -61,6 +71,12 @@ const ko: Record<string, string> = {
   "download.redownload": "다시 다운로드",
   "download.cancel": "취소",
   "download.alreadyDownloaded": "\"{title}\"은(는) 이미 다운로드한 적이 있습니다.",
+  "download.error": "오류",
+  "download.duplicateFound": "중복 발견",
+  "download.include": "포함:",
+  "download.cookie": "쿠키:",
+  "download.concurrent": "동시:",
+  "download.emptyState": "URL을 붙여넣어 다운로드를 시작하세요",
 
   "queue.title": "다운로드",
   "queue.subtitle": "다운로드 대기열 관리",
@@ -74,6 +90,9 @@ const ko: Record<string, string> = {
   "queue.completedStatus": "완료",
   "queue.failedStatus": "실패",
   "queue.pending": "대기 중",
+  "queue.downloadComplete": "다운로드 완료",
+  "queue.failed": "실패",
+  "queue.pendingStatus": "대기 중...",
 
   "history.title": "라이브러리",
   "history.subtitle": "다운로드 이력",
@@ -95,6 +114,8 @@ const ko: Record<string, string> = {
   "settings.saved": "저장됨!",
   "settings.language": "언어",
   "settings.theme": "테마",
+  "settings.general": "일반",
+  "settings.appearance": "외관",
 
   "theme.dark": "다크",
   "theme.red": "레드",
