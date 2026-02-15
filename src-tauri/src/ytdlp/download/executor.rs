@@ -1,7 +1,7 @@
 use super::manager::DownloadManager;
 use crate::modules::logger;
 use crate::ytdlp::types::*;
-use crate::ytdlp::{binary, progress, settings};
+use crate::ytdlp::{binary, progress, security, settings};
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -9,9 +9,46 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
 const STDERR_BUFFER_LIMIT_BYTES: usize = 64 * 1024;
+const KILL_TIMEOUT: Duration = Duration::from_secs(5);
+/// Maximum duration for a single download (6 hours)
+const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(6 * 60 * 60);
 
-/// Helper: emit an error download event to the frontend
+/// Kill a child process and all its descendants (e.g., ffmpeg spawned by yt-dlp).
+/// On Windows, uses `taskkill /F /T /PID` to kill the entire process tree.
+/// On Unix, sends SIGKILL to the process directly. Falls back to tokio child.kill().
+/// Includes a timeout to prevent hanging if the process doesn't respond.
+async fn kill_process_tree(child: &mut tokio::process::Child) {
+    if let Some(pid) = child.id() {
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            // taskkill /F (force) /T (tree - kill child processes) /PID
+            let _ = tokio::process::Command::new("taskkill")
+                .args(["/F", "/T", "/PID", &pid.to_string()])
+                .creation_flags(0x08000000) // CREATE_NO_WINDOW
+                .output()
+                .await;
+        }
+        #[cfg(unix)]
+        {
+            // Send SIGKILL to the process directly.
+            unsafe {
+                libc::kill(pid as i32, libc::SIGKILL);
+            }
+        }
+    }
+
+    // Fallback: standard kill via tokio
+    let _ = child.kill().await;
+
+    // Wait for the process to exit with a timeout to prevent indefinite hanging
+    let _ = tokio::time::timeout(KILL_TIMEOUT, child.wait()).await;
+}
+
+/// Helper: emit an error download event to the frontend.
+/// Sanitizes the error message to remove sensitive system paths before sending to UI.
 fn emit_download_error(app: &AppHandle, task_id: u64, message: String) {
+    let sanitized = security::sanitize_error_message(&message);
     let _ = app.emit(
         "download-event",
         GlobalDownloadEvent {
@@ -22,7 +59,7 @@ fn emit_download_error(app: &AppHandle, task_id: u64, message: String) {
             eta: None,
             file_path: None,
             file_size: None,
-            message: Some(message),
+            message: Some(sanitized),
         },
     );
 }
@@ -171,9 +208,19 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
         args.extend(["--ffmpeg-location".to_string(), ffmpeg_path]);
     }
 
-    // Add cookie browser from settings if available
+    // Add cookie browser from settings if available (validated)
     if let Some(browser) = &settings.cookie_browser {
-        args.extend(["--cookies-from-browser".to_string(), browser.clone()]);
+        if security::sanitize_cookie_browser(browser).is_ok() {
+            args.extend(["--cookies-from-browser".to_string(), browser.clone()]);
+        } else {
+            logger::warn_cat(
+                "download",
+                &format!(
+                    "[download:{}] skipping invalid cookie_browser: {}",
+                    task_id, browser
+                ),
+            );
+        }
     }
 
     // Add video URL
@@ -334,7 +381,7 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
         output
     });
 
-    // Wait for process with cancel support via tokio::select!
+    // Wait for process with cancel support and overall timeout via tokio::select!
     let status = tokio::select! {
         result = child.wait() => {
             match result {
@@ -348,10 +395,26 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
                 }
             }
         }
+        _ = tokio::time::sleep(DOWNLOAD_TIMEOUT) => {
+            // Download timeout reached - kill the process
+            logger::error_cat(
+                "download",
+                &format!("[download:{}] timed out after {:?}", task_id, DOWNLOAD_TIMEOUT),
+            );
+            kill_process_tree(&mut child).await;
+            let _ = stdout_handle.await;
+            let _ = stderr_handle.await;
+            let error_msg = "다운로드 시간이 초과되었습니다 (최대 6시간).";
+            let _ = db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(error_msg));
+            emit_download_error(&app, task_id, error_msg.to_string());
+            manager.unregister_cancel(task_id);
+            manager.release();
+            process_next_pending(app);
+            return;
+        }
         _ = cancel_rx.changed() => {
-            // Cancel signal received - kill the yt-dlp process
-            let _ = child.kill().await;
-            let _ = child.wait().await;
+            // Cancel signal received - kill the yt-dlp process and its children (e.g., ffmpeg)
+            kill_process_tree(&mut child).await;
             let _ = stdout_handle.await;
             let _ = stderr_handle.await;
             let _ = db_state.update_download_status(task_id, &DownloadStatus::Cancelled, None);
@@ -510,13 +573,15 @@ pub(super) async fn execute_download(app: AppHandle, task_id: u64) {
             )
         };
 
+        // Log full error internally, sanitize for frontend
         logger::error_cat(
             "download",
             &format!("[download:{}] failed: {}", task_id, error_message),
         );
+        let sanitized_error = security::sanitize_error_message(&error_message);
         let _ =
-            db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&error_message));
-        emit_download_error(&app, task_id, error_message);
+            db_state.update_download_status(task_id, &DownloadStatus::Failed, Some(&sanitized_error));
+        emit_download_error(&app, task_id, sanitized_error);
     }
 
     // Release the download slot and process next pending

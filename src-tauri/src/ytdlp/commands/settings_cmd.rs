@@ -2,6 +2,7 @@ use crate::modules::logger;
 use crate::modules::types::AppError;
 use crate::ytdlp::binary;
 use crate::ytdlp::download::DownloadManager;
+use crate::ytdlp::security;
 use crate::ytdlp::types::*;
 use std::sync::Arc;
 use tauri::AppHandle;
@@ -17,6 +18,19 @@ pub fn get_settings(app: AppHandle) -> Result<AppSettings, AppError> {
 #[tauri::command]
 #[specta::specta]
 pub fn update_settings(app: AppHandle, settings: AppSettings) -> Result<(), AppError> {
+    // Validate settings before saving
+    if !settings.download_path.is_empty() {
+        security::sanitize_output_path(&settings.download_path)?;
+    }
+    security::sanitize_filename_template(&settings.filename_template)?;
+    if let Some(ref browser) = settings.cookie_browser {
+        security::sanitize_cookie_browser(browser)?;
+    }
+
+    // Clamp max_concurrent to safe range
+    let mut settings = settings;
+    settings.max_concurrent = security::clamp_max_concurrent(settings.max_concurrent);
+
     // Check if dep_mode changed to invalidate cache
     let old_dep_mode = crate::ytdlp::settings::get_settings(&app)
         .map(|s| s.dep_mode)
@@ -59,9 +73,9 @@ pub async fn select_download_directory(app: AppHandle) -> Result<Option<String>,
 pub fn get_available_browsers() -> Vec<String> {
     let mut browsers = Vec::new();
 
-    if cfg!(target_os = "windows") {
-        // Check common browser paths on Windows
-        let checks = vec![
+    #[cfg(target_os = "windows")]
+    {
+        let checks: &[(&str, &str)] = &[
             (
                 "chrome",
                 r"C:\Program Files\Google\Chrome\Application\chrome.exe",
@@ -90,8 +104,11 @@ pub fn get_available_browsers() -> Vec<String> {
                 browsers.push(name.to_string());
             }
         }
-    } else if cfg!(target_os = "macos") {
-        let checks = vec![
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let checks: &[(&str, &str)] = &[
             ("chrome", "/Applications/Google Chrome.app"),
             ("firefox", "/Applications/Firefox.app"),
             ("safari", "/Applications/Safari.app"),
@@ -104,9 +121,11 @@ pub fn get_available_browsers() -> Vec<String> {
                 browsers.push(name.to_string());
             }
         }
-    } else {
-        // Linux - check common installation paths
-        let checks = vec![
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let checks: &[(&str, &str)] = &[
             ("chrome", "/usr/bin/google-chrome-stable"),
             ("chrome", "/usr/bin/google-chrome"),
             ("chromium", "/usr/bin/chromium-browser"),

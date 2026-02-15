@@ -8,6 +8,7 @@ pub mod dep_ytdlp;
 pub mod download;
 pub mod metadata;
 pub mod progress;
+pub mod security;
 pub mod settings;
 pub mod tray;
 pub mod types;

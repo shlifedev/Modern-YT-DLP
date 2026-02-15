@@ -2,8 +2,8 @@ use super::map_stderr_error;
 use super::validation::{PLAYLIST_PATTERN, VIDEO_PATTERNS};
 use crate::modules::logger;
 use crate::modules::types::AppError;
-use crate::ytdlp::binary;
 use crate::ytdlp::types::*;
+use crate::ytdlp::{binary, security};
 use std::time::Duration;
 use tauri::AppHandle;
 
@@ -14,6 +14,7 @@ const METADATA_TIMEOUT: Duration = Duration::from_secs(120);
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, AppError> {
+    let url = security::sanitize_url(&url)?;
     logger::info_cat("metadata", &format!("Fetching video info: {}", url));
     let ytdlp_path = binary::resolve_ytdlp_path_with_app(&app).await?;
     let settings = crate::ytdlp::settings::get_settings(&app).unwrap_or_default();
@@ -23,7 +24,9 @@ pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, 
     cmd.arg("--dump-json").arg("--no-playlist");
     cmd.arg("--encoding").arg("UTF-8");
     if let Some(browser) = &settings.cookie_browser {
-        cmd.arg("--cookies-from-browser").arg(browser);
+        if security::sanitize_cookie_browser(browser).is_ok() {
+            cmd.arg("--cookies-from-browser").arg(browser);
+        }
     }
     cmd.arg(&url);
 
@@ -44,7 +47,7 @@ pub async fn fetch_video_info(app: AppHandle, url: String) -> Result<VideoInfo, 
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        logger::error_cat("metadata", &format!("fetch_video_info failed: {}", stderr));
+        logger::error_cat("metadata", &format!("fetch_video_info failed: {}", security::sanitize_error_message(&stderr)));
         return Err(map_stderr_error(&stderr));
     }
 
@@ -145,6 +148,7 @@ pub async fn fetch_playlist_info(
     page: u32,
     page_size: u32,
 ) -> Result<PlaylistResult, AppError> {
+    let url = security::sanitize_url(&url)?;
     logger::info_cat(
         "metadata",
         &format!("Fetching playlist info: {} (page {})", url, page),
@@ -164,7 +168,9 @@ pub async fn fetch_playlist_info(
         cmd.arg("-I").arg(format!("{}:{}", start, end));
     }
     if let Some(browser) = &settings.cookie_browser {
-        cmd.arg("--cookies-from-browser").arg(browser);
+        if security::sanitize_cookie_browser(browser).is_ok() {
+            cmd.arg("--cookies-from-browser").arg(browser);
+        }
     }
     cmd.arg(&url);
 
@@ -203,7 +209,10 @@ pub async fn fetch_playlist_info(
         match serde_json::from_str::<serde_json::Value>(line) {
             Ok(json) => all_entries.push(json),
             Err(e) => {
-                eprintln!("Failed to parse line: {} - Error: {}", line, e);
+                logger::warn_cat(
+                    "metadata",
+                    &format!("Failed to parse playlist entry JSON: {}", e),
+                );
                 continue;
             }
         }
@@ -323,6 +332,7 @@ pub async fn fetch_playlist_info(
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_quick_metadata(url: String) -> Result<QuickMetadata, AppError> {
+    let url = security::sanitize_url(&url)?;
     logger::info_cat(
         "metadata",
         &format!("Fetching quick metadata (oEmbed): {}", url),
