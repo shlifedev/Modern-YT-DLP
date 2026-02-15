@@ -1,13 +1,19 @@
 # yt-dlp Modern GUI
 
-<p align="center">
-  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="600">
-</p>
 
 一個現代化、跨平台的桌面應用程式，用於使用 yt-dlp 下載影片。
 採用 Tauri 2.0（Rust）和 SvelteKit 構建，提供乾淨直觀的介面來管理影片下載。
 
 [**English**](../README.md) | [**한국어**](README.ko.md) | [**日本語**](README.ja.md) | [**中文(简体)**](README.zh-CN.md) | [**中文(繁體)**](README.zh-TW.md) | [**Español**](README.es.md) | [**Français**](README.fr.md) | [**Deutsch**](README.de.md) | [**Português**](README.pt-BR.md) | [**Русский**](README.ru.md) | [**Tiếng Việt**](README.vi.md)
+
+## 截圖
+
+<p align="center">
+  <img src="App.png" alt="yt-dlp Modern GUI" width="450">
+</p>
+<p align="center">
+  <img src="Downloading.png" alt="yt-dlp Modern GUI" width="450">
+</p>
 
 ## 功能
 

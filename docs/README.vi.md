@@ -1,13 +1,19 @@
 # yt-dlp Modern GUI
 
-<p align="center">
-  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="600">
-</p>
 
 Một ứng dụng máy tính để bàn hiện đại, đa nền tảng để tải xuống video bằng yt-dlp.
 Được xây dựng bằng Tauri 2.0 (Rust) và SvelteKit, cung cấp một giao diện sạch sẽ và trực quan để quản lý tải xuống video.
 
 [**English**](../README.md) | [**한국어**](README.ko.md) | [**日本語**](README.ja.md) | [**中文(简体)**](README.zh-CN.md) | [**中文(繁體)**](README.zh-TW.md) | [**Español**](README.es.md) | [**Français**](README.fr.md) | [**Deutsch**](README.de.md) | [**Português**](README.pt-BR.md) | [**Русский**](README.ru.md) | **Tiếng Việt**
+
+## Ảnh chụp màn hình
+
+<p align="center">
+  <img src="App.png" alt="yt-dlp Modern GUI" width="450">
+</p>
+<p align="center">
+  <img src="Downloading.png" alt="yt-dlp Modern GUI" width="450">
+</p>
 
 ## Các tính năng
 

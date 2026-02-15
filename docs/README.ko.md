@@ -1,13 +1,19 @@
 # yt-dlp Modern GUI
 
-<p align="center">
-  <img src="../app-image.png" alt="yt-dlp Modern GUI" width="400">
-</p>
 
 yt-dlp를 사용하여 비디오를 다운로드하기 위한 현대적이고 크로스 플랫폼 데스크톱 애플리케이션입니다.
 Tauri 2.0 (Rust)과 SvelteKit으로 구축되어 비디오 다운로드를 관리하기 위한 깔끔하고 직관적인 인터페이스를 제공합니다.
 
 [**English**](../README.md) | **한국어** | [**日本語**](README.ja.md) | [**中文(简体)**](README.zh-CN.md) | [**中文(繁體)**](README.zh-TW.md) | [**Español**](README.es.md) | [**Français**](README.fr.md) | [**Deutsch**](README.de.md) | [**Português**](README.pt-BR.md) | [**Русский**](README.ru.md) | [**Tiếng Việt**](README.vi.md)
+
+## 스크린샷
+
+<p align="center">
+  <img src="App.png" alt="yt-dlp Modern GUI" width="450">
+</p>
+<p align="center">
+  <img src="Downloading.png" alt="yt-dlp Modern GUI" width="450">
+</p>
 
 ## 기능
 
