@@ -141,7 +141,7 @@ pub async fn install_all_dependencies(app: AppHandle) -> Result<Vec<String>, App
 #[tauri::command]
 #[specta::specta]
 pub async fn check_dependency_update(
-    _app: AppHandle,
+    app: AppHandle,
     dep_name: String,
 ) -> Result<DepUpdateInfo, AppError> {
     let latest = match dep_name.as_str() {
@@ -156,10 +156,31 @@ pub async fn check_dependency_update(
         }
     };
 
+    // Fetch current installed version from cached dependency status
+    let current_version =
+        binary::get_cached_dep_status(&app).and_then(|status| match dep_name.as_str() {
+            "yt-dlp" => status.ytdlp.version,
+            "ffmpeg" => status.ffmpeg.version,
+            "deno" => status.deno.version,
+            _ => None,
+        });
+
+    // Compare versions: update is available if we can't determine current version
+    // or if the latest version string differs from the current one
+    let update_available = match &current_version {
+        Some(current) => {
+            // Normalize: strip leading 'v' for comparison
+            let current_normalized = current.trim_start_matches('v');
+            let latest_normalized = latest.trim_start_matches('v');
+            current_normalized != latest_normalized
+        }
+        None => true,
+    };
+
     Ok(DepUpdateInfo {
-        current_version: None,
+        current_version,
         latest_version: latest,
-        update_available: true,
+        update_available,
     })
 }
 

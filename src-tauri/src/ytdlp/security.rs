@@ -1,0 +1,396 @@
+use crate::modules::types::AppError;
+use std::net::IpAddr;
+use std::path::Path;
+
+/// Maximum allowed URL length (8KB - generous but prevents abuse)
+const MAX_URL_LENGTH: usize = 8192;
+
+/// Maximum allowed path length
+const MAX_PATH_LENGTH: usize = 4096;
+
+/// Maximum concurrent downloads allowed
+const MAX_CONCURRENT_LIMIT: u32 = 10;
+
+/// Allowed URL schemes
+const ALLOWED_SCHEMES: &[&str] = &["http://", "https://"];
+
+/// Known valid cookie browser names for yt-dlp's --cookies-from-browser
+const VALID_COOKIE_BROWSERS: &[&str] = &[
+    "brave", "chrome", "chromium", "edge", "firefox", "opera", "safari", "vivaldi", "whale",
+];
+
+/// Dangerous yt-dlp output template patterns that could cause path traversal or abuse
+const DANGEROUS_TEMPLATE_PATTERNS: &[&str] = &[
+    "..",   // path traversal
+    "%(#)", // might expand unpredictably
+];
+
+/// Sanitize and validate a URL for safe use with yt-dlp.
+///
+/// This checks:
+/// - URL is not empty and within length limits
+/// - Only http/https schemes are allowed (blocks file://, data://, javascript://, etc.)
+/// - SSRF protection: blocks localhost, loopback, private/link-local IP ranges
+///
+/// Note: This intentionally does NOT restrict to specific hostnames,
+/// because yt-dlp supports 1000+ sites.
+pub fn sanitize_url(url: &str) -> Result<String, AppError> {
+    let url = url.trim();
+
+    if url.is_empty() {
+        return Err(AppError::InvalidUrl("URL is empty".to_string()));
+    }
+
+    if url.len() > MAX_URL_LENGTH {
+        return Err(AppError::InvalidUrl(format!(
+            "URL exceeds maximum length of {} characters",
+            MAX_URL_LENGTH
+        )));
+    }
+
+    // Check allowed schemes
+    let lower = url.to_lowercase();
+    if !ALLOWED_SCHEMES.iter().any(|s| lower.starts_with(s)) {
+        return Err(AppError::InvalidUrl(
+            "Only http:// and https:// URLs are supported".to_string(),
+        ));
+    }
+
+    // Extract host for SSRF checks
+    if let Some(host) = extract_host(&lower) {
+        if is_ssrf_target(&host) {
+            return Err(AppError::InvalidUrl(
+                "URLs pointing to local or private network addresses are not allowed".to_string(),
+            ));
+        }
+    }
+
+    Ok(url.to_string())
+}
+
+/// Extract the hostname from a URL string (simple parser, no external deps).
+fn extract_host(url: &str) -> Option<String> {
+    // Skip scheme
+    let after_scheme = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+
+    // Strip userinfo (user:pass@)
+    let after_userinfo = if let Some(at_pos) = after_scheme.find('@') {
+        &after_scheme[at_pos + 1..]
+    } else {
+        after_scheme
+    };
+
+    // Handle IPv6 addresses in brackets: [::1], [fe80::1], etc.
+    if after_userinfo.starts_with('[') {
+        if let Some(bracket_end) = after_userinfo.find(']') {
+            let host = &after_userinfo[..=bracket_end]; // includes brackets
+            return if host.len() > 2 {
+                Some(host.to_string())
+            } else {
+                None
+            };
+        }
+        return None; // malformed IPv6
+    }
+
+    // Take until port, path, query, or fragment
+    let host = after_userinfo
+        .split([':', '/', '?', '#'])
+        .next()
+        .unwrap_or("");
+
+    if host.is_empty() {
+        None
+    } else {
+        Some(host.to_string())
+    }
+}
+
+/// Check if a hostname is a potential SSRF target (local/private network).
+fn is_ssrf_target(host: &str) -> bool {
+    // Check common local hostnames
+    if host == "localhost"
+        || host == "localhost.localdomain"
+        || host.ends_with(".localhost")
+        || host == "[::]"
+        || host == "[::1]"
+    {
+        return true;
+    }
+
+    // Try to parse as IP address
+    // Strip brackets for IPv6
+    let ip_str = host.trim_start_matches('[').trim_end_matches(']');
+    if let Ok(ip) = ip_str.parse::<IpAddr>() {
+        return match ip {
+            IpAddr::V4(v4) => {
+                v4.is_loopback()           // 127.0.0.0/8
+                    || v4.is_private()      // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+                    || v4.is_link_local()   // 169.254.0.0/16
+                    || v4.is_unspecified()  // 0.0.0.0
+                    || v4.is_broadcast()    // 255.255.255.255
+                    || v4.octets()[0] == 100 && (v4.octets()[1] & 0xC0) == 64 // 100.64.0.0/10 (CGNAT)
+            }
+            IpAddr::V6(v6) => {
+                v6.is_loopback()       // ::1
+                    || v6.is_unspecified() // ::
+                    // fe80::/10 (link-local)
+                    || (v6.segments()[0] & 0xffc0) == 0xfe80
+                    // fc00::/7 (unique local)
+                    || (v6.segments()[0] & 0xfe00) == 0xfc00
+            }
+        };
+    }
+
+    false
+}
+
+/// Validate and sanitize a download output path.
+///
+/// Ensures the path:
+/// - Is not empty and within length limits
+/// - Is an absolute path
+/// - Does not contain path traversal sequences after normalization
+pub fn sanitize_output_path(path: &str) -> Result<String, AppError> {
+    let path = path.trim();
+
+    if path.is_empty() {
+        return Err(AppError::FileError(
+            "Download path cannot be empty".to_string(),
+        ));
+    }
+
+    if path.len() > MAX_PATH_LENGTH {
+        return Err(AppError::FileError(format!(
+            "Path exceeds maximum length of {} characters",
+            MAX_PATH_LENGTH
+        )));
+    }
+
+    let p = Path::new(path);
+
+    // Must be absolute
+    if !p.is_absolute() {
+        return Err(AppError::FileError(
+            "Download path must be an absolute path".to_string(),
+        ));
+    }
+
+    // Check for path traversal in any component
+    for component in p.components() {
+        if let std::path::Component::ParentDir = component {
+            return Err(AppError::FileError(
+                "Download path must not contain '..' traversal".to_string(),
+            ));
+        }
+    }
+
+    Ok(path.to_string())
+}
+
+/// Validate a yt-dlp filename template string.
+///
+/// Allows standard yt-dlp template variables like %(title)s, %(ext)s, etc.
+/// Blocks path traversal and other dangerous patterns.
+pub fn sanitize_filename_template(template: &str) -> Result<String, AppError> {
+    let template = template.trim();
+
+    if template.is_empty() {
+        return Err(AppError::Custom(
+            "Filename template cannot be empty".to_string(),
+        ));
+    }
+
+    if template.len() > 500 {
+        return Err(AppError::Custom(
+            "Filename template is too long".to_string(),
+        ));
+    }
+
+    for pattern in DANGEROUS_TEMPLATE_PATTERNS {
+        if template.contains(pattern) {
+            return Err(AppError::Custom(format!(
+                "Filename template contains disallowed pattern: '{}'",
+                pattern
+            )));
+        }
+    }
+
+    // Disallow absolute paths in template (should be relative, joined with output_dir)
+    if Path::new(template).is_absolute() {
+        return Err(AppError::Custom(
+            "Filename template must be a relative path".to_string(),
+        ));
+    }
+
+    Ok(template.to_string())
+}
+
+/// Validate the cookie browser name against known yt-dlp supported browsers.
+pub fn sanitize_cookie_browser(browser: &str) -> Result<String, AppError> {
+    let browser = browser.trim().to_lowercase();
+
+    if browser.is_empty() {
+        return Err(AppError::Custom(
+            "Cookie browser name cannot be empty".to_string(),
+        ));
+    }
+
+    // yt-dlp accepts browser names, optionally with profile: "chrome:Profile 1"
+    // Extract just the browser name (before the colon)
+    let browser_name = browser.split(':').next().unwrap_or(&browser);
+
+    if !VALID_COOKIE_BROWSERS.contains(&browser_name) {
+        return Err(AppError::Custom(format!(
+            "Unsupported cookie browser: '{}'. Supported: {}",
+            browser_name,
+            VALID_COOKIE_BROWSERS.join(", ")
+        )));
+    }
+
+    Ok(browser.to_string())
+}
+
+/// Clamp max_concurrent to a safe range [1, MAX_CONCURRENT_LIMIT].
+pub fn clamp_max_concurrent(n: u32) -> u32 {
+    n.clamp(1, MAX_CONCURRENT_LIMIT)
+}
+
+/// Sanitize error messages before sending to the frontend.
+/// Removes potentially sensitive system paths.
+pub fn sanitize_error_message(msg: &str) -> String {
+    let mut sanitized = msg.to_string();
+
+    // Replace common home directory patterns
+    if let Ok(home) = std::env::var("HOME") {
+        sanitized = sanitized.replace(&home, "~");
+    }
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        sanitized = sanitized.replace(&profile, "~");
+    }
+
+    sanitized
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // === URL sanitization tests ===
+
+    #[test]
+    fn test_valid_http_urls() {
+        assert!(sanitize_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ").is_ok());
+        assert!(sanitize_url("http://example.com/video").is_ok());
+        assert!(sanitize_url("https://vimeo.com/123456").is_ok());
+        assert!(sanitize_url("https://www.bilibili.com/video/BV1xx411c7XW").is_ok());
+    }
+
+    #[test]
+    fn test_empty_url() {
+        assert!(sanitize_url("").is_err());
+        assert!(sanitize_url("   ").is_err());
+    }
+
+    #[test]
+    fn test_disallowed_schemes() {
+        assert!(sanitize_url("file:///etc/passwd").is_err());
+        assert!(sanitize_url("javascript:alert(1)").is_err());
+        assert!(sanitize_url("data:text/html,<h1>Hi</h1>").is_err());
+        assert!(sanitize_url("ftp://example.com/file").is_err());
+    }
+
+    #[test]
+    fn test_ssrf_localhost() {
+        assert!(sanitize_url("http://localhost/admin").is_err());
+        assert!(sanitize_url("http://localhost:8080/api").is_err());
+        assert!(sanitize_url("http://127.0.0.1/secret").is_err());
+        assert!(sanitize_url("http://127.0.0.2/secret").is_err());
+    }
+
+    #[test]
+    fn test_ssrf_private_ips() {
+        assert!(sanitize_url("http://10.0.0.1/internal").is_err());
+        assert!(sanitize_url("http://172.16.0.1/internal").is_err());
+        assert!(sanitize_url("http://192.168.1.1/internal").is_err());
+        assert!(sanitize_url("http://169.254.169.254/metadata").is_err()); // AWS metadata
+    }
+
+    #[test]
+    fn test_ssrf_ipv6() {
+        assert!(sanitize_url("http://[::1]/secret").is_err());
+        assert!(sanitize_url("http://[::]/secret").is_err());
+    }
+
+    #[test]
+    fn test_url_too_long() {
+        let long_url = format!("https://example.com/{}", "a".repeat(MAX_URL_LENGTH));
+        assert!(sanitize_url(&long_url).is_err());
+    }
+
+    // === Path sanitization tests ===
+
+    #[test]
+    fn test_valid_paths() {
+        assert!(sanitize_output_path("/Users/test/Downloads").is_ok());
+        if cfg!(target_os = "windows") {
+            // Windows absolute paths - tested on Windows only
+        }
+    }
+
+    #[test]
+    fn test_path_traversal() {
+        assert!(sanitize_output_path("/Users/test/../etc").is_err());
+        assert!(sanitize_output_path("/tmp/../../etc/passwd").is_err());
+    }
+
+    #[test]
+    fn test_relative_path_rejected() {
+        assert!(sanitize_output_path("relative/path").is_err());
+        assert!(sanitize_output_path("./local").is_err());
+    }
+
+    // === Filename template tests ===
+
+    #[test]
+    fn test_valid_templates() {
+        assert!(sanitize_filename_template("%(title)s.%(ext)s").is_ok());
+        assert!(sanitize_filename_template("%(uploader)s/%(title)s.%(ext)s").is_ok());
+        assert!(sanitize_filename_template("%(upload_date)s-%(title)s-%(id)s.%(ext)s").is_ok());
+    }
+
+    #[test]
+    fn test_template_path_traversal() {
+        assert!(sanitize_filename_template("../../%(title)s.%(ext)s").is_err());
+        assert!(sanitize_filename_template("../secret/%(title)s").is_err());
+    }
+
+    // === Cookie browser tests ===
+
+    #[test]
+    fn test_valid_browsers() {
+        assert!(sanitize_cookie_browser("chrome").is_ok());
+        assert!(sanitize_cookie_browser("firefox").is_ok());
+        assert!(sanitize_cookie_browser("edge").is_ok());
+        assert!(sanitize_cookie_browser("chrome:Profile 1").is_ok());
+    }
+
+    #[test]
+    fn test_invalid_browsers() {
+        assert!(sanitize_cookie_browser("malicious_browser").is_err());
+        assert!(sanitize_cookie_browser("").is_err());
+        assert!(sanitize_cookie_browser("/bin/sh").is_err());
+    }
+
+    // === Max concurrent tests ===
+
+    #[test]
+    fn test_clamp_max_concurrent() {
+        assert_eq!(clamp_max_concurrent(0), 1);
+        assert_eq!(clamp_max_concurrent(5), 5);
+        assert_eq!(clamp_max_concurrent(100), MAX_CONCURRENT_LIMIT);
+        assert_eq!(clamp_max_concurrent(u32::MAX), MAX_CONCURRENT_LIMIT);
+    }
+}

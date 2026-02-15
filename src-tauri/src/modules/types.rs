@@ -20,4 +20,6 @@ pub enum AppError {
     DependencyInstallError(String),
     #[error("Checksum error: {0}")]
     ChecksumError(String),
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }

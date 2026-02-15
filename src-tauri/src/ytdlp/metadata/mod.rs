@@ -40,8 +40,9 @@ fn map_stderr_error(stderr: &str) -> AppError {
         );
     }
 
+    let last_line = stderr.lines().last().unwrap_or(stderr);
     AppError::MetadataError(format!(
         "yt-dlp 오류: {}",
-        stderr.lines().last().unwrap_or(stderr)
+        crate::ytdlp::security::sanitize_error_message(last_line)
     ))
 }

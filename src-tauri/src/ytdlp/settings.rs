@@ -26,7 +26,7 @@ fn parse_settings(getter: impl Fn(&str) -> Option<serde_json::Value>) -> AppSett
         .unwrap_or(defaults.default_quality);
 
     let max_concurrent = getter("maxConcurrent")
-        .and_then(|v| v.as_u64().map(|n| n as u32))
+        .and_then(|v| v.as_u64().map(|n| (n as u32).clamp(1, 20)))
         .unwrap_or(defaults.max_concurrent);
 
     let filename_template = getter("filenameTemplate")
@@ -115,7 +115,7 @@ pub fn update_settings(app: &AppHandle, settings: &AppSettings) -> Result<(), Ap
 
     store.set(
         "maxConcurrent",
-        serde_json::to_value(settings.max_concurrent)
+        serde_json::to_value(settings.max_concurrent.clamp(1, 20))
             .map_err(|e| AppError::Custom(e.to_string()))?,
     );
 

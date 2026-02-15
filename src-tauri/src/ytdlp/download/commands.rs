@@ -2,22 +2,26 @@ use super::executor::{execute_download, process_next_pending};
 use super::manager::DownloadManager;
 use crate::modules::logger;
 use crate::modules::types::AppError;
-use crate::ytdlp::settings;
 use crate::ytdlp::types::*;
+use crate::ytdlp::{security, settings};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 #[tauri::command]
 #[specta::specta]
 pub async fn add_to_queue(app: AppHandle, request: DownloadRequest) -> Result<u64, AppError> {
+    // Validate URL
+    security::sanitize_url(&request.video_url)?;
+
     // Get settings for download path and filename template
     let settings = settings::get_settings(&app)?;
 
-    // Determine output directory
+    // Determine output directory and validate path
     let output_dir = request
         .output_dir
         .as_deref()
         .unwrap_or(&settings.download_path);
+    security::sanitize_output_path(output_dir)?;
 
     // Build output template using OS-native path separators
     let output_template = std::path::Path::new(output_dir)
@@ -134,11 +138,11 @@ pub async fn cancel_all_downloads(app: AppHandle) -> Result<u32, AppError> {
 #[tauri::command]
 #[specta::specta]
 pub async fn pause_download(_app: AppHandle, _task_id: u64) -> Result<(), AppError> {
-    Err(AppError::Custom("Not yet implemented".to_string()))
+    Err(AppError::NotImplemented("pause_download".to_string()))
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn resume_download(_app: AppHandle, _task_id: u64) -> Result<(), AppError> {
-    Err(AppError::Custom("Not yet implemented".to_string()))
+    Err(AppError::NotImplemented("resume_download".to_string()))
 }
