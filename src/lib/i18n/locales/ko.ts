@@ -86,6 +86,7 @@ const ko: Record<string, string> = {
   "settings.downloadPath": "다운로드 경로",
   "settings.browse": "찾아보기",
   "settings.concurrent": "동시 다운로드",
+  "settings.concurrentDesc": "동시 다운로드 수 (1-10)",
   "settings.cookieBrowser": "쿠키 브라우저",
   "settings.none": "없음",
   "settings.cookieHelp": "로그인이 필요한 콘텐츠를 다운로드할 때 사용",

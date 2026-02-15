@@ -92,6 +92,7 @@ const en: Record<string, string> = {
   "settings.downloadPath": "Download Path",
   "settings.browse": "Browse",
   "settings.concurrent": "Concurrent Downloads",
+  "settings.concurrentDesc": "Number of simultaneous downloads (1-10)",
   "settings.cookieBrowser": "Cookie Browser",
   "settings.none": "None",
   "settings.cookieHelp": "Used for downloading content that requires login",

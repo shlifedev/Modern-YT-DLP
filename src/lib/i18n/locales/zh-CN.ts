@@ -86,6 +86,7 @@ const zhCN: Record<string, string> = {
   "settings.downloadPath": "下载路径",
   "settings.browse": "浏览",
   "settings.concurrent": "同时下载数",
+  "settings.concurrentDesc": "同时下载数量 (1-10)",
   "settings.cookieBrowser": "Cookie浏览器",
   "settings.none": "无",
   "settings.cookieHelp": "用于下载需要登录的内容",

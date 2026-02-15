@@ -86,6 +86,7 @@ const zhTW: Record<string, string> = {
   "settings.downloadPath": "下載路徑",
   "settings.browse": "瀏覽",
   "settings.concurrent": "同時下載數",
+  "settings.concurrentDesc": "同時下載數量 (1-10)",
   "settings.cookieBrowser": "Cookie瀏覽器",
   "settings.none": "無",
   "settings.cookieHelp": "用於下載需要登入的內容",

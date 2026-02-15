@@ -61,6 +61,55 @@
   // "Load more" end-of-list flag
   let noMoreEntries = $state(false)
 
+  // Tooltip state (appended to document.body to escape stacking context)
+  let tooltipEl: HTMLDivElement | null = null
+  let tooltipTimerId: ReturnType<typeof setTimeout> | null = null
+
+  function ensureTooltipEl() {
+    if (!tooltipEl) {
+      tooltipEl = document.createElement("div")
+      tooltipEl.style.cssText = "position:fixed;z-index:999999;pointer-events:none;opacity:0;transform:translate(-50%,-100%) translateY(4px);transition:opacity 0.2s ease,transform 0.2s cubic-bezier(0.16,1,0.3,1);"
+
+      const bubble = document.createElement("div")
+      bubble.style.cssText = "background:rgba(25,25,25,0.95);color:#fff;font-size:13px;font-weight:500;line-height:1.5;padding:8px 16px;border-radius:10px;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.25),0 1px 6px rgba(0,0,0,0.1);text-align:center;"
+      bubble.dataset.role = "text"
+
+      const arrowWrap = document.createElement("div")
+      arrowWrap.style.cssText = "display:flex;justify-content:center;"
+      const arrow = document.createElement("div")
+      arrow.style.cssText = "width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:7px solid rgba(25,25,25,0.95);"
+      arrowWrap.appendChild(arrow)
+
+      tooltipEl.appendChild(bubble)
+      tooltipEl.appendChild(arrowWrap)
+      document.body.appendChild(tooltipEl)
+    }
+    return tooltipEl
+  }
+
+  function showTooltip(e: MouseEvent, text: string) {
+    const target = e.currentTarget as HTMLElement
+    if (tooltipTimerId) clearTimeout(tooltipTimerId)
+    tooltipTimerId = setTimeout(() => {
+      const rect = target.getBoundingClientRect()
+      const el = ensureTooltipEl()
+      const bubble = el.querySelector("[data-role=text]")
+      if (bubble) bubble.textContent = text
+      el.style.left = rect.left + rect.width / 2 + "px"
+      el.style.top = rect.top - 10 + "px"
+      el.style.transform = "translate(-50%, -100%) translateY(0px)"
+      el.style.opacity = "1"
+    }, 500)
+  }
+
+  function hideTooltip() {
+    if (tooltipTimerId) { clearTimeout(tooltipTimerId); tooltipTimerId = null }
+    if (tooltipEl) {
+      tooltipEl.style.opacity = "0"
+      tooltipEl.style.transform = "translate(-50%, -100%) translateY(4px)"
+    }
+  }
+
   // Auto-analyze (NOT $state to avoid being tracked by $effect)
   let analyzeTimeoutId: ReturnType<typeof setTimeout> | null = null
 
@@ -136,6 +185,8 @@
   onDestroy(() => {
     if (unlisten) unlisten()
     stopAnalyzeTimer()
+    if (tooltipTimerId) clearTimeout(tooltipTimerId)
+    if (tooltipEl) { tooltipEl.remove(); tooltipEl = null }
   })
 
   async function loadSettings() {
@@ -739,28 +790,33 @@
           </div>
 
           <!-- Bottom Row: Filename Options -->
-          <div class="flex items-center gap-4 text-xs text-yt-text-secondary border-t border-yt-border/50 pt-2 px-1">
+          <div class="flex items-center gap-4 text-xs text-yt-text-secondary border-t border-yt-border/50 pt-2 px-1 cursor-default">
              <span class="font-medium text-yt-text-secondary w-auto shrink-0 opacity-70">Include:</span>
-             <label class="flex items-center gap-1.5 cursor-pointer hover:text-yt-text transition-colors">
-                <input type="checkbox" bind:checked={templateUploaderFolder} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5" />
+             <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
+                <input type="checkbox" bind:checked={templateUploaderFolder} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
                 <span>Uploader Folder</span>
              </label>
-             <label class="flex items-center gap-1.5 cursor-pointer hover:text-yt-text transition-colors">
-                <input type="checkbox" bind:checked={templateUploadDate} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5" />
+             <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
+                <input type="checkbox" bind:checked={templateUploadDate} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
                 <span>Upload Date</span>
              </label>
-             <label class="flex items-center gap-1.5 cursor-pointer hover:text-yt-text transition-colors">
-                <input type="checkbox" bind:checked={templateVideoId} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5" />
+             <label class="flex items-center gap-1.5 hover:text-yt-text transition-colors">
+                <input type="checkbox" bind:checked={templateVideoId} onchange={saveTemplateSettings} class="rounded border-yt-border text-yt-primary focus:ring-0 w-3.5 h-3.5 cursor-default" />
                 <span>Video ID</span>
              </label>
           </div>
 
           <!-- Cookie Browser & Concurrent Downloads -->
-          <div class="flex items-center gap-4 text-xs text-yt-text-secondary border-t border-yt-border/50 pt-2 px-1">
+          <div class="flex items-center gap-4 text-xs text-yt-text-secondary border-t border-yt-border/50 pt-2 px-1 cursor-default">
              <!-- Cookie Browser -->
              <div class="flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px] text-yt-text-muted">cookie</span>
-                <span class="font-medium text-yt-text-secondary shrink-0 opacity-70">Cookie:</span>
+                <span class="material-symbols-outlined text-[16px] text-amber-500">cookie</span>
+                <span
+                  role="note"
+                  class="font-medium text-yt-text-secondary shrink-0 opacity-70"
+                  onmouseenter={(e) => showTooltip(e, t("settings.cookieHelp"))}
+                  onmouseleave={hideTooltip}
+                >Cookie:</span>
                 <select
                   class="bg-transparent border-none p-0 text-xs text-yt-text font-medium focus:ring-0 cursor-default"
                   bind:value={cookieBrowser}
@@ -777,8 +833,13 @@
 
              <!-- Concurrent Downloads -->
              <div class="flex items-center gap-1.5 flex-1">
-                <span class="material-symbols-outlined text-[16px] text-yt-text-muted">bolt</span>
-                <span class="font-medium text-yt-text-secondary shrink-0 opacity-70">Concurrent:</span>
+                <span class="material-symbols-outlined text-[16px] text-yt-primary">bolt</span>
+                <span
+                  role="note"
+                  class="font-medium text-yt-text-secondary shrink-0 opacity-70"
+                  onmouseenter={(e) => showTooltip(e, t("settings.concurrentDesc"))}
+                  onmouseleave={hideTooltip}
+                >Concurrent:</span>
                 <input
                   type="range"
                   class="flex-1 max-w-24 accent-yt-primary h-1"

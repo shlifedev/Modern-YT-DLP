@@ -86,6 +86,7 @@ const ja: Record<string, string> = {
   "settings.downloadPath": "ダウンロード先",
   "settings.browse": "参照",
   "settings.concurrent": "同時ダウンロード数",
+  "settings.concurrentDesc": "同時ダウンロード数 (1-10)",
   "settings.cookieBrowser": "Cookieブラウザ",
   "settings.none": "なし",
   "settings.cookieHelp": "ログインが必要なコンテンツのダウンロードに使用",

@@ -86,6 +86,7 @@ const fr: Record<string, string> = {
   "settings.downloadPath": "Dossier de téléchargement",
   "settings.browse": "Parcourir",
   "settings.concurrent": "Téléchargements simultanés",
+  "settings.concurrentDesc": "Nombre de téléchargements simultanés (1-10)",
   "settings.cookieBrowser": "Navigateur Cookie",
   "settings.none": "Aucun",
   "settings.cookieHelp": "Pour télécharger du contenu nécessitant une connexion",
